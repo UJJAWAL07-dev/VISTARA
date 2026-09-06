@@ -101,6 +101,57 @@ def load_and_prepare_vector_layer(
     )
 
 
+def prepare_layer_bundle(
+    layer_specs: List[Dict[str, Any]],
+    target_crs: Optional[str] = None,
+    aoi_bounds: Optional[Tuple[float, float, float, float]] = None,
+    aoi_crs: Optional[str] = None,
+) -> Dict[str, Layer]:
+    """
+    Load and prepare multiple related vector layers consistently.
+
+    Each spec must contain ``path``, ``layer_id``, and ``name``. It may
+    also contain ``assume_crs`` and ``repair``. The target CRS and AOI
+    are applied uniformly to every layer in the bundle.
+    """
+    bundle: Dict[str, Layer] = {}
+
+    for spec in layer_specs:
+        layer = load_and_prepare_vector_layer(
+            path=spec["path"],
+            layer_id=spec["layer_id"],
+            name=spec["name"],
+            assume_crs=spec.get("assume_crs"),
+            target_crs=target_crs,
+            repair=spec.get("repair", False),
+            aoi_bounds=aoi_bounds,
+            aoi_crs=aoi_crs,
+        )
+        bundle[layer.id] = layer
+
+    return bundle
+
+
+def get_analysis_ready_bundle_summary(
+    bundle: Dict[str, Layer],
+) -> Dict[str, Any]:
+    """Return serializable bundle metadata and CRS consistency details."""
+    summaries = {
+        layer_id: layer.summary()
+        for layer_id, layer in bundle.items()
+    }
+    crs_values = {summary["crs"] for summary in summaries.values()}
+
+    return {
+        "layer_count": len(bundle),
+        "layers": summaries,
+        "consistent_crs": len(crs_values) <= 1,
+        "crs_values_present": sorted(
+            value for value in crs_values if value is not None
+        ),
+    }
+
+
 def load_raster_layer(path: Union[str, Path], layer_id: str, name: str) -> Layer:
     """Build a raster Layer without retaining an open file handle."""
     return build_raster_layer(path, layer_id=layer_id, name=name)
