@@ -7,18 +7,6 @@ const DEFAULT_ZOOM = 14;
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900";
 
-const PARCEL_POSITIONS: Record<
-  string,
-  { left: string; top: string }
-> = {
-  "P-1042": { left: "70%", top: "32%" },
-  "P-1043": { left: "39%", top: "43%" },
-  "P-1044": { left: "50%", top: "62%" },
-  "P-1045": { left: "25%", top: "72%" },
-  "P-1046": { left: "80%", top: "48%" },
-  "P-1047": { left: "30%", top: "55%" },
-};
-
 interface MapGridProps {
   layers: Layer[];
   parcels: Parcel[];
@@ -27,6 +15,27 @@ interface MapGridProps {
   onZoomChange: (zoom: number) => void;
   onResetView: () => void;
   onSelectParcel: (parcelId: string) => void;
+}
+
+function getPolygonCenter(parcel: Parcel) {
+  const coordinates = parcel.geometry.coordinates[0];
+
+  if (!coordinates.length) {
+    return [50, 50] as const;
+  }
+
+  const total = coordinates.reduce(
+    (sum, coordinate) => ({
+      x: sum.x + coordinate[0],
+      y: sum.y + coordinate[1],
+    }),
+    { x: 0, y: 0 }
+  );
+
+  return [
+    total.x / coordinates.length,
+    total.y / coordinates.length,
+  ] as const;
 }
 
 function MapGrid({
@@ -119,7 +128,9 @@ function MapGrid({
         {isLayerVisible("roads") && (
           <>
             <div className="absolute left-[-10%] top-[48%] h-10 w-[120%] rotate-[-10deg] bg-white shadow-sm" />
+
             <div className="absolute left-[15%] top-[-20%] h-[140%] w-8 rotate-[24deg] bg-white shadow-sm" />
+
             <div className="absolute left-[65%] top-[-20%] h-[140%] w-8 rotate-[24deg] bg-white shadow-sm" />
           </>
         )}
@@ -128,7 +139,9 @@ function MapGrid({
         {isLayerVisible("land-use") && (
           <>
             <div className="absolute left-[8%] top-[16%] h-[23%] w-[25%] bg-emerald-100/35" />
+
             <div className="absolute left-[42%] top-[48%] h-[25%] w-[28%] bg-amber-100/35" />
+
             <div className="absolute left-[72%] top-[15%] h-[28%] w-[20%] bg-blue-100/35" />
           </>
         )}
@@ -153,11 +166,7 @@ function MapGrid({
         {/* Parcel markers */}
         {isLayerVisible("parcels") &&
           parcels.map((parcel) => {
-            const position =
-              PARCEL_POSITIONS[parcel.id] ?? {
-                left: "50%",
-                top: "50%",
-              };
+            const [left, top] = getPolygonCenter(parcel);
 
             const isSelected = parcel.id === selectedParcelId;
 
@@ -174,8 +183,8 @@ function MapGrid({
                   isSelected && "z-20"
                 )}
                 style={{
-                  left: position.left,
-                  top: position.top,
+                  left: `${left}%`,
+                  top: `${top}%`,
                 }}
               >
                 <MapPin
@@ -208,8 +217,13 @@ function MapGrid({
       </div>
 
       <div className="absolute bottom-4 right-5 z-10 flex border border-slate-200 bg-white text-xs text-slate-600 shadow-sm">
-        <span className="border-r border-slate-200 px-3 py-2">100 m</span>
-        <span className="px-3 py-2">EPSG:4326</span>
+        <span className="border-r border-slate-200 px-3 py-2">
+          100 m
+        </span>
+
+        <span className="px-3 py-2">
+          EPSG:4326
+        </span>
       </div>
     </div>
   );

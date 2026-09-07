@@ -74,17 +74,17 @@ const initialParcels: Parcel[] = [
   confidence: 96,
   status: "Validated",
   geometry: {
-    type: "Polygon",
-    coordinates: [
-      [
-        [73.8567, 18.5204],
-        [73.8577, 18.5204],
-        [73.8577, 18.5213],
-        [73.8567, 18.5213],
-        [73.8567, 18.5204],
-      ],
+  type: "Polygon",
+  coordinates: [
+    [
+      [68, 30],
+      [72, 30],
+      [72, 34],
+      [68, 34],
+      [68, 30],
     ],
-  },
+  ],
+},
 },
   {
   id: "P-1043",
@@ -92,15 +92,15 @@ const initialParcels: Parcel[] = [
   landUse: "Residential",
   confidence: 96,
   status: "Validated",
-  geometry: {
+geometry: {
   type: "Polygon",
   coordinates: [
     [
-      [73.8580, 18.5204],
-      [73.8590, 18.5204],
-      [73.8590, 18.5213],
-      [73.8580, 18.5213],
-      [73.8580, 18.5204],
+      [37, 41],
+      [41, 41],
+      [41, 45],
+      [37, 45],
+      [37, 41],
     ],
   ],
 },
@@ -115,11 +115,11 @@ const initialParcels: Parcel[] = [
   type: "Polygon",
   coordinates: [
     [
-      [73.8567, 18.5192],
-      [73.8577, 18.5192],
-      [73.8577, 18.5201],
-      [73.8567, 18.5201],
-      [73.8567, 18.5192],
+      [48, 60],
+      [52, 60],
+      [52, 64],
+      [48, 64],
+      [48, 60],
     ],
   ],
 },
@@ -136,15 +136,15 @@ const generatedParcels: Parcel[] = [
   landUse: "Residential",
   confidence: 96,
   status: "Validated",
-  geometry: {
+geometry: {
   type: "Polygon",
   coordinates: [
     [
-      [73.8580, 18.5192],
-      [73.8590, 18.5192],
-      [73.8590, 18.5201],
-      [73.8580, 18.5201],
-      [73.8580, 18.5192],
+      [23, 70],
+      [27, 70],
+      [27, 74],
+      [23, 74],
+      [23, 70],
     ],
   ],
 },
@@ -155,15 +155,15 @@ const generatedParcels: Parcel[] = [
   landUse: "Residential",
   confidence: 96,
   status: "Validated",
-  geometry: {
+geometry: {
   type: "Polygon",
   coordinates: [
     [
-      [73.8593, 18.5204],
-      [73.8603, 18.5204],
-      [73.8603, 18.5213],
-      [73.8593, 18.5213],
-      [73.8593, 18.5204],
+      [78, 46],
+      [82, 46],
+      [82, 50],
+      [78, 50],
+      [78, 46],
     ],
   ],
 },
@@ -178,11 +178,11 @@ const generatedParcels: Parcel[] = [
   type: "Polygon",
   coordinates: [
     [
-      [73.8593, 18.5192],
-      [73.8603, 18.5192],
-      [73.8603, 18.5201],
-      [73.8593, 18.5201],
-      [73.8593, 18.5192],
+      [28, 53],
+      [32, 53],
+      [32, 57],
+      [28, 57],
+      [28, 53],
     ],
   ],
 },
