@@ -13,12 +13,20 @@ export type Layer = {
 
 export type ParcelStatus = "Validated" | "Review";
 
+export type Position = [number, number];
+
+export type PolygonGeometry = {
+  type: "Polygon";
+  coordinates: Position[][];
+};
+
 export type Parcel = {
   id: string;
   area: string;
   landUse: string;
   confidence: number;
   status: ParcelStatus;
+  geometry: PolygonGeometry;
 };
 
 export type ToolId =

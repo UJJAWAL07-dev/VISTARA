@@ -1,3 +1,4 @@
+
 import { useState, type ReactNode } from "react";
 import {
   BarChart3,
@@ -33,7 +34,7 @@ import type {
   ToolId,
 } from "@/types/dashboard";
 
-
+import MapGrid from "@/map/MapGrid";
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2";
@@ -66,54 +67,126 @@ const initialLayers: Layer[] = [
 ];
 
 const initialParcels: Parcel[] = [
-  {
-    id: "P-1042",
-    area: "1,284 m²",
-    landUse: "Residential",
-    confidence: 96,
-    status: "Validated",
+{
+  id: "P-1042",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+    type: "Polygon",
+    coordinates: [
+      [
+        [73.8567, 18.5204],
+        [73.8577, 18.5204],
+        [73.8577, 18.5213],
+        [73.8567, 18.5213],
+        [73.8567, 18.5204],
+      ],
+    ],
   },
+},
   {
-    id: "P-1043",
-    area: "842 m²",
-    landUse: "Residential",
-    confidence: 91,
-    status: "Validated",
-  },
+  id: "P-1043",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+  type: "Polygon",
+  coordinates: [
+    [
+      [73.8580, 18.5204],
+      [73.8590, 18.5204],
+      [73.8590, 18.5213],
+      [73.8580, 18.5213],
+      [73.8580, 18.5204],
+    ],
+  ],
+},
+},
   {
-    id: "P-1044",
-    area: "1,976 m²",
-    landUse: "Mixed Use",
-    confidence: 78,
-    status: "Review",
-  },
-  {
-    id: "P-1045",
-    area: "623 m²",
-    landUse: "Commercial",
-    confidence: 94,
-    status: "Validated",
-  },
+  id: "P-1044",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+  type: "Polygon",
+  coordinates: [
+    [
+      [73.8567, 18.5192],
+      [73.8577, 18.5192],
+      [73.8577, 18.5201],
+      [73.8567, 18.5201],
+      [73.8567, 18.5192],
+    ],
+  ],
+},
+},
 ];
 
 // Parcels the "Generate features" action reveals. In a real integration
 // these — and their geometry — would come back from the AI/GIS backend
 // instead of being appended locally.
 const generatedParcels: Parcel[] = [
+ {
+  id: "P-1045",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+  type: "Polygon",
+  coordinates: [
+    [
+      [73.8580, 18.5192],
+      [73.8590, 18.5192],
+      [73.8590, 18.5201],
+      [73.8580, 18.5201],
+      [73.8580, 18.5192],
+    ],
+  ],
+},
+},
   {
-    id: "P-1046",
-    area: "1,105 m²",
-    landUse: "Commercial",
-    confidence: 89,
-    status: "Validated",
-  },
-  {
-    id: "P-1047",
-    area: "758 m²",
-    landUse: "Residential",
-    confidence: 73,
-    status: "Review",
-  },
+  id: "P-1046",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+  type: "Polygon",
+  coordinates: [
+    [
+      [73.8593, 18.5204],
+      [73.8603, 18.5204],
+      [73.8603, 18.5213],
+      [73.8593, 18.5213],
+      [73.8593, 18.5204],
+    ],
+  ],
+},
+},
+{
+  id: "P-1047",
+  area: "1,284 m²",
+  landUse: "Residential",
+  confidence: 96,
+  status: "Validated",
+  geometry: {
+  type: "Polygon",
+  coordinates: [
+    [
+      [73.8593, 18.5192],
+      [73.8603, 18.5192],
+      [73.8603, 18.5201],
+      [73.8593, 18.5201],
+      [73.8593, 18.5192],
+    ],
+  ],
+},
+},
 ];
 
 // Demo-only screen positions for the mock parcel markers, keyed by parcel
@@ -122,123 +195,13 @@ const generatedParcels: Parcel[] = [
 // geometry (GeoJSON, etc.) instead of a lookup like this. Positions are
 // percentages of the map's own coordinate space, so they stay correct
 // under the zoom transform applied to that same space.
-const PARCEL_POSITIONS: Record<string, { left: string; top: string }> = {
-  "P-1042": { left: "17%", top: "21%" },
-  "P-1043": { left: "48%", top: "62%" },
-  "P-1044": { left: "76%", top: "29%" },
-  "P-1045": { left: "34%", top: "40%" },
-  "P-1046": { left: "62%", top: "46%" },
-  "P-1047": { left: "23%", top: "73%" },
-};
+
 
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 20;
 const DEFAULT_ZOOM = 14;
 
-function MapGrid({
-  layers,
-  parcels,
-  selectedParcelId,
-  onSelectParcel,
-  zoom,
-}: {
-  layers: Layer[];
-  parcels: Parcel[];
-  selectedParcelId: string | null;
-  onSelectParcel: (id: string) => void;
-  zoom: number;
-}) {
-  const isLayerVisible = (id: LayerId) =>
-    layers.find((layer) => layer.id === id)?.visible ?? false;
 
-  const scale = zoom / DEFAULT_ZOOM;
-
-  return (
-    <div className="absolute inset-0 overflow-hidden bg-[#e9edf0]">
-      {/* Everything that represents the actual map content scales together
-          with zoom. UI chrome (info chips below) intentionally does not. */}
-      <div
-        className="absolute inset-0 origin-center transition-transform duration-300 ease-out"
-        style={{ transform: `scale(${scale})` }}
-      >
-        <div
-          className="absolute inset-0 opacity-70"
-          style={{
-            backgroundImage:
-              "linear-gradient(#cbd5dc 1px, transparent 1px), linear-gradient(90deg, #cbd5dc 1px, transparent 1px)",
-            backgroundSize: "42px 42px",
-          }}
-        />
-
-        {isLayerVisible("land-use") && (
-          <>
-            <div className="absolute left-[8%] top-[8%] h-[38%] w-[40%] bg-emerald-200/40" />
-            <div className="absolute left-[54%] top-[8%] h-[38%] w-[38%] bg-amber-200/40" />
-            <div className="absolute left-[8%] top-[54%] h-[38%] w-[84%] bg-sky-200/30" />
-          </>
-        )}
-
-        {isLayerVisible("roads") && (
-          <>
-            <div className="absolute -left-[8%] top-[42%] h-10 w-[125%] rotate-[-12deg] bg-white shadow-sm" />
-            <div className="absolute left-[15%] top-[-10%] h-[130%] w-8 rotate-[23deg] bg-white shadow-sm" />
-            <div className="absolute left-[57%] top-[-10%] h-[130%] w-7 rotate-[23deg] bg-white shadow-sm" />
-          </>
-        )}
-
-        {isLayerVisible("buildings") && (
-          <>
-            <div className="absolute left-[9%] top-[16%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
-            <div className="absolute left-[30%] top-[12%] h-24 w-48 border-2 border-slate-500 bg-white/40" />
-            <div className="absolute left-[63%] top-[17%] h-32 w-32 border-2 border-slate-500 bg-white/40" />
-
-            <div className="absolute left-[13%] top-[59%] h-32 w-44 border-2 border-slate-500 bg-white/40" />
-            <div className="absolute left-[40%] top-[54%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
-            <div className="absolute left-[69%] top-[58%] h-36 w-28 border-2 border-slate-500 bg-white/40" />
-          </>
-        )}
-
-        {isLayerVisible("parcels") &&
-          parcels.map((parcel) => {
-            const position = PARCEL_POSITIONS[parcel.id] ?? { left: "50%", top: "50%" };
-            const isSelected = parcel.id === selectedParcelId;
-
-            return (
-              <button
-                key={parcel.id}
-                type="button"
-                onClick={() => onSelectParcel(parcel.id)}
-                title={`Parcel ${parcel.id}`}
-                aria-label={`Select parcel ${parcel.id}`}
-                aria-pressed={isSelected}
-                style={{ left: position.left, top: position.top }}
-                className={cn(
-                  "absolute grid -translate-x-1/2 -translate-y-full place-items-center rounded-full transition-transform hover:scale-110",
-                  FOCUS_RING,
-                  isSelected ? "text-slate-950" : "text-slate-600 hover:text-slate-900",
-                )}
-              >
-                <MapPin
-                  className={cn("drop-shadow-sm", isSelected ? "size-6" : "size-5")}
-                  strokeWidth={isSelected ? 2.5 : 2}
-                  fill={isSelected ? "white" : "none"}
-                />
-              </button>
-            );
-          })}
-      </div>
-
-      <div className="absolute bottom-5 left-5 border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
-        Sample urban cadastral workspace
-      </div>
-
-      <div className="absolute bottom-5 right-5 flex items-center border border-slate-300 bg-white text-xs text-slate-600 shadow-sm">
-        <span className="border-r border-slate-300 px-3 py-2">100 m</span>
-        <span className="px-3 py-2">EPSG:4326</span>
-      </div>
-    </div>
-  );
-}
 
 function LayerListPanel({
   layers,
@@ -784,12 +747,14 @@ export default function DashboardPage() {
         {/* Central map */}
         <main className="relative min-w-0 flex-1">
           <MapGrid
-            layers={layers}
-            parcels={parcels}
-            selectedParcelId={selectedParcelId}
-            onSelectParcel={selectParcel}
-            zoom={zoom}
-          />
+  layers={layers}
+  parcels={parcels}
+  selectedParcelId={selectedParcelId}
+  zoom={zoom}
+  onZoomChange={setZoom}
+  onResetView={resetView}
+  onSelectParcel={setSelectedParcelId}
+/>
 
           {/* Map controls */}
           <div className="absolute left-4 top-4 z-10 flex flex-col border border-slate-300 bg-white shadow-sm">
