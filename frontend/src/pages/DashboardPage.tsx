@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   BarChart3,
   CheckCircle2,
@@ -25,19 +25,31 @@ import {
 
 import { cn } from "@/lib/utils";
 
+type LayerId = "parcels" | "buildings" | "roads" | "land-use";
+
 type Layer = {
-  id: string;
+  id: LayerId;
   name: string;
   type: string;
   visible: boolean;
 };
+
+type ParcelStatus = "Validated" | "Review";
 
 type Parcel = {
   id: string;
   area: string;
   landUse: string;
   confidence: number;
-  status: "Validated" | "Review";
+  status: ParcelStatus;
+};
+
+type ToolId = "select" | "layers" | "inspect" | "generate" | "analysis" | "validation";
+
+type AnalysisResults = {
+  parcelsDetected: number;
+  buildingsDetected: number;
+  validationIssues: number;
 };
 
 const initialLayers: Layer[] = [
@@ -67,7 +79,7 @@ const initialLayers: Layer[] = [
   },
 ];
 
-const parcels: Parcel[] = [
+const initialParcels: Parcel[] = [
   {
     id: "P-1042",
     area: "1,284 m²",
@@ -98,42 +110,134 @@ const parcels: Parcel[] = [
   },
 ];
 
-function MapGrid() {
+// Parcels the "Generate features" action reveals. In a real integration
+// these — and their geometry — would come back from the AI/GIS backend
+// instead of being appended locally.
+const generatedParcels: Parcel[] = [
+  {
+    id: "P-1046",
+    area: "1,105 m²",
+    landUse: "Commercial",
+    confidence: 89,
+    status: "Validated",
+  },
+  {
+    id: "P-1047",
+    area: "758 m²",
+    landUse: "Residential",
+    confidence: 73,
+    status: "Review",
+  },
+];
+
+// Demo-only screen positions for the mock parcel markers, keyed by parcel
+// id. This is purely a frontend visualization concern for the sample
+// workspace — a real map integration would position features from actual
+// geometry (GeoJSON, etc.) instead of a lookup like this.
+const PARCEL_POSITIONS: Record<string, { left: string; top: string }> = {
+  "P-1042": { left: "17%", top: "21%" },
+  "P-1043": { left: "48%", top: "62%" },
+  "P-1044": { left: "76%", top: "29%" },
+  "P-1045": { left: "34%", top: "40%" },
+  "P-1046": { left: "62%", top: "46%" },
+  "P-1047": { left: "23%", top: "73%" },
+};
+
+const MIN_ZOOM = 10;
+const MAX_ZOOM = 20;
+const DEFAULT_ZOOM = 14;
+
+function MapGrid({
+  layers,
+  parcels,
+  selectedParcelId,
+  onSelectParcel,
+  zoom,
+}: {
+  layers: Layer[];
+  parcels: Parcel[];
+  selectedParcelId: string | null;
+  onSelectParcel: (id: string) => void;
+  zoom: number;
+}) {
+  const isLayerVisible = (id: LayerId) =>
+    layers.find((layer) => layer.id === id)?.visible ?? false;
+
+  const scale = zoom / DEFAULT_ZOOM;
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#e9edf0]">
       <div
-        className="absolute inset-0 opacity-70"
-        style={{
-          backgroundImage:
-            "linear-gradient(#cbd5dc 1px, transparent 1px), linear-gradient(90deg, #cbd5dc 1px, transparent 1px)",
-          backgroundSize: "42px 42px",
-        }}
-      />
+        className="absolute inset-0 origin-center transition-transform duration-300 ease-out"
+        style={{ transform: `scale(${scale})` }}
+      >
+        <div
+          className="absolute inset-0 opacity-70"
+          style={{
+            backgroundImage:
+              "linear-gradient(#cbd5dc 1px, transparent 1px), linear-gradient(90deg, #cbd5dc 1px, transparent 1px)",
+            backgroundSize: "42px 42px",
+          }}
+        />
 
-      <div className="absolute -left-[8%] top-[42%] h-10 w-[125%] rotate-[-12deg] bg-white shadow-sm" />
-      <div className="absolute left-[15%] top-[-10%] h-[130%] w-8 rotate-[23deg] bg-white shadow-sm" />
-      <div className="absolute left-[57%] top-[-10%] h-[130%] w-7 rotate-[23deg] bg-white shadow-sm" />
+        {isLayerVisible("land-use") && (
+          <>
+            <div className="absolute left-[8%] top-[8%] h-[38%] w-[40%] bg-emerald-200/40" />
+            <div className="absolute left-[54%] top-[8%] h-[38%] w-[38%] bg-amber-200/40" />
+            <div className="absolute left-[8%] top-[54%] h-[38%] w-[84%] bg-sky-200/30" />
+          </>
+        )}
 
-      <div className="absolute left-[9%] top-[16%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
-      <div className="absolute left-[30%] top-[12%] h-24 w-48 border-2 border-slate-500 bg-white/40" />
-      <div className="absolute left-[63%] top-[17%] h-32 w-32 border-2 border-slate-500 bg-white/40" />
+        {isLayerVisible("roads") && (
+          <>
+            <div className="absolute -left-[8%] top-[42%] h-10 w-[125%] rotate-[-12deg] bg-white shadow-sm" />
+            <div className="absolute left-[15%] top-[-10%] h-[130%] w-8 rotate-[23deg] bg-white shadow-sm" />
+            <div className="absolute left-[57%] top-[-10%] h-[130%] w-7 rotate-[23deg] bg-white shadow-sm" />
+          </>
+        )}
 
-      <div className="absolute left-[13%] top-[59%] h-32 w-44 border-2 border-slate-500 bg-white/40" />
-      <div className="absolute left-[40%] top-[54%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
-      <div className="absolute left-[69%] top-[58%] h-36 w-28 border-2 border-slate-500 bg-white/40" />
+        {isLayerVisible("buildings") && (
+          <>
+            <div className="absolute left-[9%] top-[16%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
+            <div className="absolute left-[30%] top-[12%] h-24 w-48 border-2 border-slate-500 bg-white/40" />
+            <div className="absolute left-[63%] top-[17%] h-32 w-32 border-2 border-slate-500 bg-white/40" />
 
-      <div className="absolute left-[17%] top-[21%] size-3 rounded-full border-2 border-white bg-slate-700 shadow" />
-      <div className="absolute left-[48%] top-[62%] size-3 rounded-full border-2 border-white bg-slate-700 shadow" />
-      <div className="absolute left-[76%] top-[29%] size-3 rounded-full border-2 border-white bg-slate-700 shadow" />
+            <div className="absolute left-[13%] top-[59%] h-32 w-44 border-2 border-slate-500 bg-white/40" />
+            <div className="absolute left-[40%] top-[54%] h-28 w-36 border-2 border-slate-500 bg-white/40" />
+            <div className="absolute left-[69%] top-[58%] h-36 w-28 border-2 border-slate-500 bg-white/40" />
+          </>
+        )}
+
+        {isLayerVisible("parcels") &&
+          parcels.map((parcel) => {
+            const position = PARCEL_POSITIONS[parcel.id] ?? { left: "50%", top: "50%" };
+            const isSelected = parcel.id === selectedParcelId;
+
+            return (
+              <button
+                key={parcel.id}
+                type="button"
+                onClick={() => onSelectParcel(parcel.id)}
+                aria-label={`Select parcel ${parcel.id}`}
+                aria-pressed={isSelected}
+                style={{ left: position.left, top: position.top }}
+                className={cn(
+                  "absolute grid place-items-center rounded-full border-2 border-white shadow transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2",
+                  isSelected
+                    ? "size-4 bg-slate-950 ring-2 ring-slate-950/40 ring-offset-2"
+                    : "size-3 bg-slate-700",
+                )}
+              />
+            );
+          })}
+      </div>
 
       <div className="absolute bottom-5 left-5 border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
         Sample urban cadastral workspace
       </div>
 
       <div className="absolute bottom-5 right-5 flex items-center border border-slate-300 bg-white text-xs text-slate-600 shadow-sm">
-        <span className="border-r border-slate-300 px-3 py-2">
-          100 m
-        </span>
+        <span className="border-r border-slate-300 px-3 py-2">100 m</span>
         <span className="px-3 py-2">EPSG:4326</span>
       </div>
     </div>
@@ -141,40 +245,94 @@ function MapGrid() {
 }
 
 export default function DashboardPage() {
-  const [layers, setLayers] = useState(initialLayers);
-  const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(
-    parcels[0],
+  const [layers, setLayers] = useState<Layer[]>(initialLayers);
+  const [parcels, setParcels] = useState<Parcel[]>(initialParcels);
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(
+    initialParcels[0]?.id ?? null,
   );
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [activeTool, setActiveTool] = useState("select");
+  const [activeTool, setActiveTool] = useState<ToolId>("select");
   const [processing, setProcessing] = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [processingLabel, setProcessingLabel] = useState("");
+  const [featuresGenerated, setFeaturesGenerated] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
 
-  function toggleLayer(id: string) {
+  const selectedParcel = parcels.find((parcel) => parcel.id === selectedParcelId) ?? null;
+
+  function toggleLayer(id: LayerId) {
     setLayers((currentLayers) =>
       currentLayers.map((layer) =>
-        layer.id === id
-          ? { ...layer, visible: !layer.visible }
-          : layer,
+        layer.id === id ? { ...layer, visible: !layer.visible } : layer,
       ),
     );
   }
 
+  function selectParcel(id: string) {
+    setSelectedParcelId(id);
+    setRightPanelOpen(true);
+  }
+
+  function openToolPanel(tool: ToolId) {
+    setActiveTool(tool);
+    setRightPanelOpen(true);
+  }
+
   function runGeneration() {
     setProcessing(true);
+    setProcessingLabel("Generating cadastral features...");
 
     window.setTimeout(() => {
       setProcessing(false);
+      setProcessingLabel("");
+      setFeaturesGenerated(true);
+      // Newly generated features change the underlying dataset, so any
+      // previous analysis is now stale until validation is re-run.
+      setAnalysisResults(null);
+
+      setLayers((currentLayers) =>
+        currentLayers.map((layer) =>
+          layer.id === "parcels" || layer.id === "buildings" || layer.id === "roads"
+            ? { ...layer, visible: true }
+            : layer,
+        ),
+      );
+
+      setParcels((currentParcels) => {
+        const alreadyGenerated = generatedParcels.every((parcel) =>
+          currentParcels.some((existing) => existing.id === parcel.id),
+        );
+
+        return alreadyGenerated ? currentParcels : [...currentParcels, ...generatedParcels];
+      });
     }, 1800);
   }
 
   function runAnalysis() {
     setProcessing(true);
+    setProcessingLabel("Running topology validation...");
 
     window.setTimeout(() => {
       setProcessing(false);
-      setAnalysisComplete(true);
+      setProcessingLabel("");
+      setAnalysisResults({
+        parcelsDetected: parcels.length,
+        buildingsDetected: parcels.length * 3,
+        validationIssues: parcels.filter((parcel) => parcel.status === "Review").length,
+      });
     }, 1600);
+  }
+
+  function zoomIn() {
+    setZoom((current) => Math.min(MAX_ZOOM, current + 1));
+  }
+
+  function zoomOut() {
+    setZoom((current) => Math.max(MIN_ZOOM, current - 1));
+  }
+
+  function resetView() {
+    setZoom(DEFAULT_ZOOM);
   }
 
   return (
@@ -198,8 +356,13 @@ export default function DashboardPage() {
           <div className="hidden h-7 w-px bg-slate-200 sm:block" />
 
           <div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
-            <span className="size-2 rounded-full bg-emerald-500" />
-            Workspace ready
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                processing ? "bg-amber-500" : "bg-emerald-500",
+              )}
+            />
+            {processing ? "Workspace processing" : "Workspace ready"}
           </div>
         </div>
 
@@ -259,7 +422,7 @@ export default function DashboardPage() {
           <ToolButton
             label="Generate"
             active={activeTool === "generate"}
-            onClick={() => setActiveTool("generate")}
+            onClick={() => openToolPanel("generate")}
           >
             <Sparkles className="size-4" />
           </ToolButton>
@@ -267,7 +430,7 @@ export default function DashboardPage() {
           <ToolButton
             label="Analysis"
             active={activeTool === "analysis"}
-            onClick={() => setActiveTool("analysis")}
+            onClick={() => openToolPanel("analysis")}
           >
             <BarChart3 className="size-4" />
           </ToolButton>
@@ -275,15 +438,16 @@ export default function DashboardPage() {
           <ToolButton
             label="Validation"
             active={activeTool === "validation"}
-            onClick={() => setActiveTool("validation")}
+            onClick={() => openToolPanel("validation")}
           >
             <FileCheck2 className="size-4" />
           </ToolButton>
 
           <div className="mt-auto">
             <ToolButton
-              label="Export"
+              label="Export (coming soon)"
               active={false}
+              disabled
               onClick={() => undefined}
             >
               <Download className="size-4" />
@@ -303,8 +467,10 @@ export default function DashboardPage() {
 
             <button
               type="button"
-              className="grid size-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
+              className="grid size-8 place-items-center rounded-md text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Add layer"
+              title="Add layer (coming soon)"
+              disabled
             >
               <Upload className="size-4" />
             </button>
@@ -317,15 +483,11 @@ export default function DashboardPage() {
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     Dataset
                   </p>
-                  <p className="mt-1 text-sm font-medium">
-                    Pune_Ward_07
-                  </p>
+                  <p className="mt-1 text-sm font-medium">Pune_Ward_07</p>
                 </div>
                 <Map className="size-4 text-slate-400" />
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Urban imagery · 2.4 GB
-              </p>
+              <p className="mt-2 text-xs text-slate-500">Urban imagery · 2.4 GB</p>
             </div>
           </div>
 
@@ -343,11 +505,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => toggleLayer(layer.id)}
                   className="grid size-7 place-items-center rounded text-slate-500 hover:bg-slate-100"
-                  aria-label={
-                    layer.visible
-                      ? `Hide ${layer.name}`
-                      : `Show ${layer.name}`
-                  }
+                  aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
                 >
                   {layer.visible ? (
                     <Eye className="size-4" />
@@ -374,20 +532,30 @@ export default function DashboardPage() {
 
         {/* Central map */}
         <main className="relative min-w-0 flex-1">
-          <MapGrid />
+          <MapGrid
+            layers={layers}
+            parcels={parcels}
+            selectedParcelId={selectedParcelId}
+            onSelectParcel={selectParcel}
+            zoom={zoom}
+          />
 
           {/* Map controls */}
           <div className="absolute left-4 top-4 z-10 flex flex-col border border-slate-300 bg-white shadow-sm">
             <button
               type="button"
-              className="grid size-9 place-items-center border-b border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={zoomIn}
+              disabled={zoom >= MAX_ZOOM}
+              className="grid size-9 place-items-center border-b border-slate-200 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Zoom in"
             >
               <ZoomIn className="size-4" />
             </button>
             <button
               type="button"
-              className="grid size-9 place-items-center text-slate-600 hover:bg-slate-50"
+              onClick={zoomOut}
+              disabled={zoom <= MIN_ZOOM}
+              className="grid size-9 place-items-center text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Zoom out"
             >
               <ZoomOut className="size-4" />
@@ -397,6 +565,7 @@ export default function DashboardPage() {
           <div className="absolute right-4 top-4 z-10 flex gap-2">
             <button
               type="button"
+              onClick={resetView}
               className="flex items-center gap-2 border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
             >
               <RotateCcw className="size-3.5" />
@@ -409,9 +578,7 @@ export default function DashboardPage() {
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               MAP WORKSPACE
             </p>
-            <p className="mt-1 text-sm font-semibold">
-              Generated cadastral features
-            </p>
+            <p className="mt-1 text-sm font-semibold">Generated cadastral features</p>
           </div>
 
           {/* Processing overlay */}
@@ -421,12 +588,8 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <div className="size-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
                   <div>
-                    <p className="text-sm font-semibold">
-                      Processing workspace
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      VISTARA is processing the selected operation...
-                    </p>
+                    <p className="text-sm font-semibold">Processing workspace</p>
+                    <p className="mt-1 text-xs text-slate-500">{processingLabel}</p>
                   </div>
                 </div>
               </div>
@@ -440,9 +603,7 @@ export default function DashboardPage() {
             <div className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
               <div>
                 <p className="text-sm font-semibold">Inspector</p>
-                <p className="text-[11px] text-slate-400">
-                  Feature properties
-                </p>
+                <p className="text-[11px] text-slate-400">Feature properties</p>
               </div>
 
               <button
@@ -463,9 +624,7 @@ export default function DashboardPage() {
               {selectedParcel ? (
                 <>
                   <div className="mt-2 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                      {selectedParcel.id}
-                    </h2>
+                    <h2 className="text-xl font-semibold">{selectedParcel.id}</h2>
                     <span
                       className={cn(
                         "rounded-full px-2 py-1 text-[10px] font-semibold",
@@ -480,14 +639,8 @@ export default function DashboardPage() {
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <Property label="Area" value={selectedParcel.area} />
-                    <Property
-                      label="Land use"
-                      value={selectedParcel.landUse}
-                    />
-                    <Property
-                      label="Confidence"
-                      value={`${selectedParcel.confidence}%`}
-                    />
+                    <Property label="Land use" value={selectedParcel.landUse} />
+                    <Property label="Confidence" value={`${selectedParcel.confidence}%`} />
                     <Property label="Source" value="AI + GIS" />
                   </div>
                 </>
@@ -507,7 +660,9 @@ export default function DashboardPage() {
               </div>
 
               <p className="mt-2 text-sm leading-5 text-slate-600">
-                Generate cadastral features from the selected dataset.
+                {featuresGenerated
+                  ? "Cadastral features generated from the selected dataset."
+                  : "Generate cadastral features from the selected dataset."}
               </p>
 
               <button
@@ -517,8 +672,15 @@ export default function DashboardPage() {
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 <Play className="size-4" />
-                Generate features
+                {featuresGenerated ? "Regenerate features" : "Generate features"}
               </button>
+
+              {featuresGenerated && !processing && (
+                <div className="mt-3 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                  <CheckCircle2 className="size-4" />
+                  Features generated successfully.
+                </div>
+              )}
             </div>
 
             <div className="border-b border-slate-200 p-4">
@@ -529,11 +691,26 @@ export default function DashboardPage() {
                 <BarChart3 className="size-4 text-slate-400" />
               </div>
 
-              <div className="mt-3 space-y-2">
-                <Metric label="Parcels detected" value="1,248" />
-                <Metric label="Buildings detected" value="3,417" />
-                <Metric label="Validation issues" value="23" />
-              </div>
+              {analysisResults ? (
+                <div className="mt-3 space-y-2">
+                  <Metric
+                    label="Parcels detected"
+                    value={analysisResults.parcelsDetected.toLocaleString()}
+                  />
+                  <Metric
+                    label="Buildings detected"
+                    value={analysisResults.buildingsDetected.toLocaleString()}
+                  />
+                  <Metric
+                    label="Validation issues"
+                    value={String(analysisResults.validationIssues)}
+                  />
+                </div>
+              ) : (
+                <div className="mt-3 border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+                  Run validation to see analysis metrics.
+                </div>
+              )}
 
               <button
                 type="button"
@@ -542,10 +719,10 @@ export default function DashboardPage() {
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
               >
                 <FileCheck2 className="size-4" />
-                Run validation
+                {analysisResults ? "Re-run validation" : "Run validation"}
               </button>
 
-              {analysisComplete && (
+              {analysisResults && !processing && (
                 <div className="mt-3 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
                   <CheckCircle2 className="size-4" />
                   Validation completed successfully.
@@ -563,19 +740,15 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     key={parcel.id}
-                    onClick={() => setSelectedParcel(parcel)}
+                    onClick={() => selectParcel(parcel.id)}
                     className={cn(
                       "flex w-full items-center justify-between rounded-md px-3 py-2 text-left hover:bg-slate-50",
-                      selectedParcel?.id === parcel.id && "bg-slate-100",
+                      selectedParcelId === parcel.id && "bg-slate-100",
                     )}
                   >
                     <div>
-                      <p className="text-xs font-semibold text-slate-800">
-                        {parcel.id}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {parcel.landUse}
-                      </p>
+                      <p className="text-xs font-semibold text-slate-800">{parcel.id}</p>
+                      <p className="text-[10px] text-slate-400">{parcel.landUse}</p>
                     </div>
 
                     <span className="text-[10px] font-medium text-slate-500">
@@ -592,7 +765,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setRightPanelOpen(true)}
-            className="absolute right-4 top-4 z-20 grid size-9 place-items-center border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+            className="absolute right-4 top-4 z-20 hidden size-9 place-items-center border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 xl:grid"
             aria-label="Open inspector"
           >
             <PanelRight className="size-4" />
@@ -605,12 +778,12 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
           <span>VISTARA WORKSPACE</span>
           <span>Dataset: Pune_Ward_07</span>
-          <span className="hidden sm:inline">4 layers</span>
+          <span className="hidden sm:inline">{layers.length} layers</span>
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline">Ready</span>
-          <span>Zoom 14</span>
+          <span className="hidden sm:inline">{processing ? "Processing" : "Ready"}</span>
+          <span>Zoom {zoom}</span>
           <span>EPSG:4326</span>
         </div>
       </footer>
@@ -623,11 +796,13 @@ function ToolButton({
   label,
   active,
   onClick,
+  disabled = false,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   label: string;
   active: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -635,11 +810,14 @@ function ToolButton({
       onClick={onClick}
       title={label}
       aria-label={label}
+      disabled={disabled}
       className={cn(
         "mb-1 grid size-9 place-items-center rounded-md transition-colors",
-        active
-          ? "bg-slate-950 text-white"
-          : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+        disabled
+          ? "cursor-not-allowed text-slate-300"
+          : active
+            ? "bg-slate-950 text-white"
+            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
       )}
     >
       {children}
