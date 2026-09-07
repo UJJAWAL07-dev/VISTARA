@@ -25,32 +25,15 @@ import {
 
 import { cn } from "@/lib/utils";
 
-type LayerId = "parcels" | "buildings" | "roads" | "land-use";
+import type {
+  AnalysisResults,
+  Layer,
+  LayerId,
+  Parcel,
+  ToolId,
+} from "@/types/dashboard";
 
-type Layer = {
-  id: LayerId;
-  name: string;
-  type: string;
-  visible: boolean;
-};
 
-type ParcelStatus = "Validated" | "Review";
-
-type Parcel = {
-  id: string;
-  area: string;
-  landUse: string;
-  confidence: number;
-  status: ParcelStatus;
-};
-
-type ToolId = "select" | "layers" | "inspect" | "generate" | "analysis" | "validation";
-
-type AnalysisResults = {
-  parcelsDetected: number;
-  buildingsDetected: number;
-  validationIssues: number;
-};
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2";
