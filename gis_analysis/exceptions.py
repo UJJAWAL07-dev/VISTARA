@@ -29,6 +29,11 @@ class LayerMismatchError(AnalysisError):
         super().__init__(f"Layer mismatch: {detail}")
 
 
+class InvalidInputError(AnalysisError):
+    def __init__(self, detail):
+        super().__init__(f"Invalid input to analysis function: {detail}")
+
+
 class ValidationRuleError(AnalysisError):
     def __init__(self, rule_name, detail):
         self.rule_name = rule_name

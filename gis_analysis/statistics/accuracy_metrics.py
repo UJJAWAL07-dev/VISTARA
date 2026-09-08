@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 import geopandas as gpd
 
+from gis_analysis.exceptions import InvalidInputError
 from gis_analysis.spatial.crs_check import assert_consistent_crs
 from gis_analysis.spatial.geometry_metrics import centroid_distance
 
@@ -51,7 +52,9 @@ def calculate_accuracy_metrics(
     }
 
     if (predicted_gdf is None) != (ground_truth_gdf is None):
-        raise ValueError("predicted_gdf and ground_truth_gdf must be supplied together")
+        raise InvalidInputError(
+            "predicted_gdf and ground_truth_gdf must be supplied together"
+        )
     if predicted_gdf is None or ground_truth_gdf is None:
         return result
 
