@@ -1,0 +1,24 @@
+pipeline:
+  target_classes:
+    - building
+    - road
+  device: "cpu"
+
+preprocessing:
+  target_size: [1024, 1024]
+  normalize: true
+  maintain_aspect_ratio: true
+
+model:
+  type: "heuristic_segmentor" # Lightweight prototype segmentor
+  confidence_threshold: 0.50
+
+postprocessing:
+  min_area_pixels: 40.0
+  max_area_pixels: 500000.0
+  simplification_tolerance: 1.5
+  morphology_kernel_size: 3
+
+output:
+  export_format: "geojson"
+  crs: "EPSG:4326"
