@@ -30,7 +30,7 @@ def find_overlaps(gdf: gpd.GeoDataFrame, layer_name: str = "layer") -> List[Tupl
             if other is None or other.is_empty:
                 continue
             if geom.intersection(other).area > 0:
-                overlaps.append((i, j))
+                overlaps.append((i, int(j)))
 
     return overlaps
 
@@ -58,7 +58,7 @@ def find_contained(
         for j in sindex.intersection(geom.bounds):
             container_geom = container_gdf.geometry.iloc[j]
             if container_geom is not None and container_geom.covers(geom):
-                match = j
+                match = int(j)
                 break
         results.append((i, match))
 
@@ -91,7 +91,7 @@ def spatial_match(
                 score = iou(pred_geom, ground_truth_gdf.geometry.iloc[j])
                 if score > best_iou:
                     best_iou = score
-                    best_j = j
+                    best_j = int(j)
 
         results.append(
             {

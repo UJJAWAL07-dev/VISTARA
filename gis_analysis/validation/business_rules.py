@@ -1,62 +1,61 @@
-"""Business-rule validation for parcel and building layers."""
+"""Business-rule validation for spatial layers."""
 
 from typing import Any, Dict
 
 import geopandas as gpd
 
+from gis_analysis.exceptions import ValidationRuleError
 from gis_analysis.spatial.relationships import find_contained, find_overlaps
 
 
-def validate_no_overlaps(
-    gdf: gpd.GeoDataFrame,
-    layer_name: str = "parcels",
-) -> Dict[str, Any]:
-    """Validate that features do not share positive-area geometry."""
-    overlap_pairs = find_overlaps(gdf, layer_name=layer_name)
-    violations = [
-        {"feature_index_a": first, "feature_index_b": second}
-        for first, second in overlap_pairs
-    ]
+def check_no_overlap(gdf: gpd.GeoDataFrame, layer_name: str = "layer") -> Dict[str, Any]:
+    """Check that no two features in a layer share positive-area geometry."""
+    try:
+        overlaps = find_overlaps(gdf, layer_name=layer_name)
+    except Exception as error:
+        raise ValidationRuleError("no_overlap", str(error)) from error
+
     return {
-        "rule": "no_overlaps",
+        "rule": "no_overlap",
         "layer": layer_name,
-        "valid": not violations,
-        "checked_count": len(gdf),
-        "violation_count": len(violations),
-        "violations": violations,
+        "total_features": len(gdf),
+        "violation_count": len(overlaps),
+        "violations": overlaps,
+        "passed": len(overlaps) == 0,
     }
 
 
-def validate_must_be_contained_in(
-    container_gdf: gpd.GeoDataFrame,
-    contained_gdf: gpd.GeoDataFrame,
-    container_name: str = "parcels",
-    contained_name: str = "buildings",
+def check_contained_within(
+    inner_gdf: gpd.GeoDataFrame,
+    outer_gdf: gpd.GeoDataFrame,
+    inner_name: str = "inner_layer",
+    outer_name: str = "outer_layer",
 ) -> Dict[str, Any]:
-    """Validate that every contained-layer feature belongs to a container."""
-    containment = find_contained(
-        container_gdf,
-        contained_gdf,
-        layer_name=f"{contained_name}_in_{container_name}",
-    )
+    """Check that every inner-layer feature is contained by an outer feature."""
+    try:
+        results = find_contained(
+            outer_gdf,
+            inner_gdf,
+            layer_name=f"{inner_name}_in_{outer_name}",
+        )
+    except Exception as error:
+        raise ValidationRuleError("contained_within", str(error)) from error
+
     matches = [
-        {"contained_index": contained_index, "container_index": container_index}
-        for contained_index, container_index in containment
-        if container_index is not None
+        (inner_index, outer_index)
+        for inner_index, outer_index in results
+        if outer_index is not None
     ]
     violations = [
-        {"contained_index": contained_index, "container_index": None}
-        for contained_index, container_index in containment
-        if container_index is None
+        inner_index for inner_index, outer_index in results if outer_index is None
     ]
     return {
-        "rule": "must_be_contained_in",
-        "container_layer": container_name,
-        "contained_layer": contained_name,
-        "valid": not violations,
-        "checked_count": len(containment),
-        "match_count": len(matches),
+        "rule": "contained_within",
+        "inner_layer": inner_name,
+        "outer_layer": outer_name,
+        "total_inner_features": len(inner_gdf),
         "violation_count": len(violations),
-        "matches": matches,
         "violations": violations,
+        "matches": matches,
+        "passed": len(violations) == 0,
     }
