@@ -25,6 +25,7 @@ The GIS and Backend teams must parse this GeoJSON for downstream analysis and da
   },
   "features": [
     {
+
       "type": "Feature",
       "geometry": { "type": "Polygon", "coordinates": [...] },
       "properties": {
@@ -32,6 +33,7 @@ The GIS and Backend teams must parse this GeoJSON for downstream analysis and da
         "class": "building",
         "confidence": 0.85,
         "area_px": 124.0
+
       }
     }
   ]
