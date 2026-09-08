@@ -1,13 +1,38 @@
 # VISTARA — AI/ML Subsystem
 
-Responsible for feature extraction (building footprints and road corridors) from drone imagery and raster datasets, returning structured GeoJSON datasets for downstream GIS and backend consumption.
+This module handles feature extraction (building footprints and road corridors) from drone imagery.
 
-## Architecture & Workflow
-1. **Preprocessing (`ai/preprocessing/`)**: Ingests `.tif`, `.png`, and `.jpg` imagery, validates dynamic ranges, and preserves geospatial affine transforms and coordinate reference systems.
-2. **Inference (`ai/models/`, `ai/inference/`)**: Runs feature segmentation targeting building boundaries and road surfaces.
-3. **Postprocessing (`ai/postprocessing/`)**: Extracts clean contours, simplifies boundaries using Douglas-Peucker algorithms, and converts coordinates into GeoJSON format.
-4. **Pipeline Orchestrator (`ai/pipeline.py`)**: End-to-end interface for standalone execution or integration with `backend/app/services`.
+## 🚀 How to Run the Pipeline
+The AI pipeline acts as a standalone service. You can run it via the CLI:
+`python -m ai.pipeline <path_to_raster_image>`
 
-## Installation
-```powershell
-pip install -r ai/requirements.txt
+## 📜 Integration Contract (Input / Output)
+
+### INPUT
+The AI module expects a path to a valid raster image (`.png`, `.jpg`, `.tif`).
+
+### OUTPUT
+The AI module outputs a standard **GeoJSON FeatureCollection** (`EPSG:4326`). 
+The GIS and Backend teams must parse this GeoJSON for downstream analysis and database storage.
+
+**Example Output Structure:**
+{
+  "type": "FeatureCollection",
+  "properties": {
+    "image_name": "synthetic_drone_view.png",
+    "crs": "EPSG:4326",
+    "total_features": 2
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [...] },
+      "properties": {
+        "id": "building_1",
+        "class": "building",
+        "confidence": 0.85,
+        "area_px": 124.0
+      }
+    }
+  ]
+}
