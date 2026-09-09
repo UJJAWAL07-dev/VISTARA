@@ -29,6 +29,25 @@ export type Parcel = {
   geometry: PolygonGeometry;
 };
 
+export type Building = {
+  id: string;
+  geometry: PolygonGeometry;
+};
+
+export type Road = {
+  id: string;
+  geometry: {
+    type: "LineString";
+    coordinates: Position[];
+  };
+};
+
+export type LandUseZone = {
+  id: string;
+  category: string;
+  geometry: PolygonGeometry;
+};
+
 export type ToolId =
   | "select"
   | "layers"
@@ -37,8 +56,22 @@ export type ToolId =
   | "analysis"
   | "validation";
 
+export type ValidationIssueSeverity = "low" | "medium" | "high";
+
+export type ValidationIssueFeatureType = "parcel" | "building";
+
+export type ValidationIssue = {
+  id: string;
+  featureType: ValidationIssueFeatureType;
+  featureId: string;
+  severity: ValidationIssueSeverity;
+  title: string;
+  message: string;
+};
+
 export type AnalysisResults = {
   parcelsDetected: number;
   buildingsDetected: number;
   validationIssues: number;
+  issues: ValidationIssue[];
 };
