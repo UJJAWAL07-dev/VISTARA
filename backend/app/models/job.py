@@ -9,7 +9,7 @@ stores (see process_service.py docstring for why).
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 JOB_STATUSES = {"queued", "processing", "completed", "failed"}
@@ -24,3 +24,8 @@ class Job:
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Phase 4: populated once the AI -> GIS -> Analysis pipeline finishes.
+    # `result` holds {"ai": ..., "gis": ..., "analysis": ...} on success.
+    # `error` holds a safe, human-readable message (never a traceback) on failure.
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
