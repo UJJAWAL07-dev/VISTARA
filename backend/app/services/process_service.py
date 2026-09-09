@@ -10,13 +10,19 @@ Follows the same pattern as ProjectService/DatasetService:
 2. ProcessingService - business logic. Routes call this, never the
    store directly.
 
-ORCHESTRATOR BOUNDARY: this service does NOT implement parcel
-extraction, building/road/land-use detection, or any GIS algorithm.
-`_dispatch_to_pipeline` is the single seam where that real work will
-be wired in later (likely handed off to the AI/GIS services,
-probably asynchronously, updating the job's status as it progresses).
-For now it's a no-op - the job is simply created as "queued" and left
-there, which is what the current spec asks for.
+PHASE 4 ORCHESTRATION: `_dispatch_to_pipeline` (kept as the original
+seam name from Phase 3) now actually orchestrates the AI -> GIS ->
+Analysis adapters, synchronously, and updates the job's status as it
+goes: queued -> processing -> completed/failed. This is still not a
+real AI/GIS/GIS-analysis implementation - the adapters injected here
+default to deterministic mocks (see app/integrations/). Swapping in
+real adapters later requires no change to this orchestration logic,
+only to what `AIAdapter`/`GISAdapter`/`AnalysisAdapter` do internally.
+
+Any adapter failure is caught here: the job is marked "failed" with a
+safe, human-readable error message, and the exception never propagates
+out of this method - the API process must never crash because a mock
+(or, later, a real) adapter raised.
 
 Note: project_id/dataset_id are NOT validated against the Projects/
 Datasets stores in this phase (unlike Dataset -> Project validation
@@ -29,6 +35,9 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
 
+from app.integrations.ai_adapter import AIAdapter, AIAdapterError
+from app.integrations.analysis_adapter import AnalysisAdapter, AnalysisAdapterError
+from app.integrations.gis_adapter import GISAdapter, GISAdapterError
 from app.models.job import Job
 from app.schemas.process import ProcessRequest
 
@@ -66,8 +75,19 @@ class InMemoryJobStore:
 
 
 class ProcessingService:
-    def __init__(self, store: Optional[InMemoryJobStore] = None) -> None:
+    def __init__(
+        self,
+        store: Optional[InMemoryJobStore] = None,
+        ai_adapter: Optional[AIAdapter] = None,
+        gis_adapter: Optional[GISAdapter] = None,
+        analysis_adapter: Optional[AnalysisAdapter] = None,
+    ) -> None:
         self._store = store or InMemoryJobStore()
+        # Adapters are injectable so tests (and later, real
+        # implementations) can swap them without touching this class.
+        self._ai_adapter = ai_adapter or AIAdapter()
+        self._gis_adapter = gis_adapter or GISAdapter()
+        self._analysis_adapter = analysis_adapter or AnalysisAdapter()
 
     def submit_job(self, data: ProcessRequest) -> Job:
         job = Job(
@@ -88,16 +108,41 @@ class ProcessingService:
 
     def _dispatch_to_pipeline(self, job: Job) -> None:
         """
-        Mocked integration seam.
+        Orchestrates AI -> GIS -> Analysis for the given job, synchronously.
 
-        Later, this hands the job off to the AI/GIS/GIS-analysis
-        pipeline (likely async) and updates job.status as processing
-        progresses (queued -> processing -> completed/failed). For now
-        it intentionally does nothing - the job stays "queued", per
-        the current phase's scope (simulate the interface, not the
-        algorithms).
+        On success: job.result = {"ai": ..., "gis": ..., "analysis": ...},
+        job.status = "completed".
+
+        On any adapter failure: job.error is set to a short, safe message
+        (never the exception's raw traceback), job.status = "failed", and
+        this method returns normally - it never lets an exception escape,
+        so a broken adapter can never crash the API process.
         """
-        return
+        self._set_status(job, "processing")
+
+        try:
+            ai_result = self._ai_adapter.run_inference(job)
+            gis_result = self._gis_adapter.process(job, ai_result)
+            analysis_result = self._analysis_adapter.analyze(job, gis_result)
+        except (AIAdapterError, GISAdapterError, AnalysisAdapterError) as exc:
+            job.error = str(exc)
+            self._set_status(job, "failed")
+            return
+        except Exception:
+            # Defensive: an adapter should only ever raise its own XAdapterError,
+            # but if something unexpected happens, fail safely rather than
+            # exposing internal details or crashing the request.
+            job.error = "Processing failed due to an unexpected internal error."
+            self._set_status(job, "failed")
+            return
+
+        job.result = {"ai": ai_result, "gis": gis_result, "analysis": analysis_result}
+        self._set_status(job, "completed")
+
+    def _set_status(self, job: Job, new_status: str) -> None:
+        job.status = new_status
+        job.updated_at = datetime.now(timezone.utc)
+        self._store.update(job.id, job)
 
 
 # Module-level singleton, shared across requests within this process.

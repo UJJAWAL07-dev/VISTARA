@@ -2,10 +2,10 @@
 Processing API routes.
 
 Thin HTTP layer: Pydantic validates the request shape and feature
-names, ProcessingService handles job creation/lookup, exceptions are
-translated to HTTP responses here. No processing/orchestration logic
-lives in this file - see process_service.py's `_dispatch_to_pipeline`
-for where that connects later.
+names, ProcessingService handles job creation and orchestration,
+exceptions are translated to HTTP responses here. No orchestration
+logic lives in this file - see process_service.py's
+`_dispatch_to_pipeline` for the AI -> GIS -> Analysis flow.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -27,9 +27,11 @@ router = APIRouter(prefix="/process", tags=["processing"])
     summary="Submit a processing request",
     description=(
         "Accepts a project/dataset reference and a list of features to extract "
-        "(parcels, buildings, roads, land_use), creates a queued job, and returns "
-        "its ID immediately. Actual feature extraction is orchestrated separately "
-        "and is not performed synchronously by this endpoint."
+        "(parcels, buildings, roads, land_use), creates a job, and synchronously "
+        "runs it through the (currently mocked) AI -> GIS -> Analysis pipeline "
+        "before returning. The returned status reflects the outcome at return "
+        "time (queued/processing/completed/failed) - use GET /process/{job_id} "
+        "to re-check status and retrieve the full result later."
     ),
 )
 async def create_process_job(
@@ -54,4 +56,9 @@ async def get_process_job(
         job = service.get_job(job_id)
     except JobNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return JobStatusResponse(job_id=job.id, status=job.status)
+    return JobStatusResponse(
+        job_id=job.id,
+        status=job.status,
+        result=job.result,
+        error=job.error,
+    )
