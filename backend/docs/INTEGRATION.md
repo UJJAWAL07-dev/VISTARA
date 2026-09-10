@@ -66,7 +66,18 @@ def list(self) -> List[Job]: ...
 def update(self, job_id: str, job: Job) -> Optional[Job]: ...
 ```
 (No `delete()` - there's no delete-a-job endpoint today, so it's not part
-of the contract. Add it later if that changes.)
+of the contract. Add it later if that changes.) A real store backing this
+Protocol is also what `GET /api/v1/process` (list all jobs) reads from -
+no separate contract needed for that endpoint.
+
+**Cascade delete:** deleting a project also deletes its datasets.
+`ProjectService.delete_project` calls a `dataset_cleanup` callable after
+a successful project deletion; in production this resolves to
+`DatasetService.delete_by_project(project_id)`, which is not part of the
+`DatasetRepository` Protocol itself (it's built from the Protocol's
+existing `list()`/`delete()` methods) - a real `DatasetRepository`
+implementation doesn't need anything extra to support this, the service
+layer handles it.
 
 `Project`, `Dataset`, and `Job` are plain dataclasses in `app/models/`.
 A database-backed repository can return ORM objects instead, as long as

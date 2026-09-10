@@ -39,12 +39,28 @@ runtime defaults.
 
 Phase 6: added `list_jobs()` (backing the new GET /api/v1/process list
 endpoint) and lifecycle logging (job created/completed/failed).
+
+Phase 7: `_dispatch_to_pipeline` now validates each adapter's output
+against its documented Pydantic schema (GeoJSONFeatureCollection /
+GISResult / AnalysisResult, from app/schemas/process.py) before
+trusting it. A schema mismatch is converted into that stage's own
+XAdapterError (e.g. a malformed AI output becomes an AIAdapterError)
+so it flows through the exact same existing except block, with the
+exact same existing behavior, as an adapter that raised directly.
+This closes a real gap: previously, malformed-but-successfully-
+returned adapter output would either reach job.result unvalidated, or
+surface later as an opaque, uncaught pydantic.ValidationError when the
+route tried to build the HTTP response. Now it's caught here, at the
+orchestration boundary, and turned into a normal "failed" job with a
+safe, stage-specific message - exactly like any other adapter failure.
 """
 
 import logging
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
+
+from pydantic import ValidationError
 
 from app.core.interfaces import (
     AIAdapterProtocol,
@@ -56,7 +72,7 @@ from app.integrations.ai_adapter import AIAdapter, AIAdapterError
 from app.integrations.analysis_adapter import AnalysisAdapter, AnalysisAdapterError
 from app.integrations.gis_adapter import GISAdapter, GISAdapterError
 from app.models.job import Job
-from app.schemas.process import ProcessRequest
+from app.schemas.process import AnalysisResult, GeoJSONFeatureCollection, GISResult, ProcessRequest
 
 logger = logging.getLogger(__name__)
 
@@ -137,17 +153,39 @@ class ProcessingService:
         On success: job.result = {"ai": ..., "gis": ..., "analysis": ...},
         job.status = "completed".
 
-        On any adapter failure: job.error is set to a short, safe message
-        (never the exception's raw traceback), job.status = "failed", and
-        this method returns normally - it never lets an exception escape,
-        so a broken adapter can never crash the API process.
+        On any adapter failure - including an adapter returning output
+        that fails schema validation, not just an adapter raising its own
+        XAdapterError - job.error is set to a short, safe message (never
+        the exception's raw traceback or the full Pydantic validation
+        error), job.status = "failed", and this method returns normally -
+        it never lets an exception escape, so a broken adapter (mock or,
+        later, real) can never crash the API process.
         """
         self._set_status(job, "processing")
 
         try:
             ai_result = self._ai_adapter.run_inference(job)
+            try:
+                GeoJSONFeatureCollection.model_validate(ai_result)
+            except ValidationError as exc:
+                logger.error("Job %s: AI adapter output failed schema validation: %s", job.id, exc)
+                raise AIAdapterError("AI adapter output did not match the expected schema.") from exc
+
             gis_result = self._gis_adapter.process(job, ai_result)
+            try:
+                GISResult.model_validate(gis_result)
+            except ValidationError as exc:
+                logger.error("Job %s: GIS adapter output failed schema validation: %s", job.id, exc)
+                raise GISAdapterError("GIS adapter output did not match the expected schema.") from exc
+
             analysis_result = self._analysis_adapter.analyze(job, gis_result)
+            try:
+                AnalysisResult.model_validate(analysis_result)
+            except ValidationError as exc:
+                logger.error("Job %s: Analysis adapter output failed schema validation: %s", job.id, exc)
+                raise AnalysisAdapterError(
+                    "Analysis adapter output did not match the expected schema."
+                ) from exc
         except (AIAdapterError, GISAdapterError, AnalysisAdapterError) as exc:
             job.error = str(exc)
             self._set_status(job, "failed")

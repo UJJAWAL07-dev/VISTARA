@@ -14,8 +14,22 @@ GIS-analysis algorithms itself.
 - **Phase 4** - Processing orchestration. `ProcessingService` now runs a
   job synchronously through three integration adapters and stores a
   structured result on the job.
-- **Phase 5 (planned)** - Real PostgreSQL/PostGIS persistence, replacing
-  the in-memory stores used by every phase so far.
+- **Phase 5** - `Protocol`-based contracts for every store and adapter
+  (`app/core/interfaces.py`) plus `docs/INTEGRATION.md`, so future
+  database/GIS/AI/GIS-analysis implementations have a documented,
+  type-checked contract to build against. No behavior change.
+- **Phase 6** - `GET /api/v1/process` (list all jobs); deleting a project
+  now cascades to delete its datasets; a global handler returns a safe,
+  generic error for any unexpected exception instead of leaking a
+  traceback; stdlib logging configured across the app.
+- **Phase 7** - Each adapter's output is now validated against its
+  schema (`GeoJSONFeatureCollection` / `GISResult` / `AnalysisResult`)
+  before a job is marked completed. Malformed adapter output - not just
+  an adapter that raises - now correctly fails the job with a safe
+  message instead of risking an unvalidated result or an opaque 500.
+- **Real PostgreSQL/PostGIS persistence (planned)** - replacing the
+  in-memory stores used by every phase so far, once the database
+  module is ready. Not yet scheduled to a specific phase number.
 
 ## Phase 4: integration adapters
 
