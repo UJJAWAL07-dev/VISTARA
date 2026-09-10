@@ -6,7 +6,12 @@ names, ProcessingService handles job creation and orchestration,
 exceptions are translated to HTTP responses here. No orchestration
 logic lives in this file - see process_service.py's
 `_dispatch_to_pipeline` for the AI -> GIS -> Analysis flow.
+
+Phase 6: added GET /process (list all jobs), mirroring the existing
+list-endpoint convention already used by Projects and Datasets.
 """
+
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -40,6 +45,21 @@ async def create_process_job(
 ) -> ProcessResponse:
     job = service.submit_job(payload)
     return ProcessResponse(job_id=job.id, status=job.status)
+
+
+@router.get(
+    "",
+    response_model=List[JobStatusResponse],
+    summary="List all processing jobs",
+)
+async def list_process_jobs(
+    service: ProcessingService = Depends(get_processing_service),
+) -> List[JobStatusResponse]:
+    jobs = service.list_jobs()
+    return [
+        JobStatusResponse(job_id=job.id, status=job.status, result=job.result, error=job.error)
+        for job in jobs
+    ]
 
 
 @router.get(

@@ -22,8 +22,14 @@ storage.
 Phase 5: DatasetService now type-hints its `store` parameter against
 the DatasetRepository Protocol instead of the concrete
 InMemoryDatasetStore class. Typing-only change - no behavior change.
+
+Phase 6: added `delete_by_project`, called by ProjectService's cascade
+delete (see project_service.py's `_dataset_cleanup`). This method only
+touches DatasetService's own store - ProjectService never reaches into
+it directly, it only ever calls this public method.
 """
 
+import logging
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Callable, Dict, List, Optional
@@ -32,6 +38,8 @@ from app.core.interfaces import DatasetRepository
 from app.models.dataset import Dataset
 from app.schemas.dataset import DatasetCreate, DatasetUpdate
 from app.services.project_service import get_project_service
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetNotFoundError(Exception):
@@ -96,7 +104,9 @@ class DatasetService:
             description=data.description,
             status=data.status,
         )
-        return self._store.add(dataset)
+        created = self._store.add(dataset)
+        logger.info("Dataset %s created under project %s", created.id, created.project_id)
+        return created
 
     def list_datasets(self, project_id: Optional[str] = None) -> List[Dataset]:
         return self._store.list(project_id=project_id)
@@ -125,13 +135,31 @@ class DatasetService:
         deleted = self._store.delete(dataset_id)
         if not deleted:
             raise DatasetNotFoundError(dataset_id)
+        logger.info("Dataset %s deleted", dataset_id)
+
+    def delete_by_project(self, project_id: str) -> int:
+        """
+        Deletes every dataset belonging to the given project. Called by
+        ProjectService's cascade delete (Phase 6) via the public
+        `dataset_cleanup` callable - never by ProjectService touching
+        this class's store directly.
+
+        Returns the number of datasets deleted. Safe to call for a
+        project with zero datasets (returns 0, does nothing).
+        """
+        datasets = self._store.list(project_id=project_id)
+        for dataset in datasets:
+            self._store.delete(dataset.id)
+        if datasets:
+            logger.info("Cascade-deleted %d dataset(s) for project %s", len(datasets), project_id)
+        return len(datasets)
 
 
 # Module-level singleton, shared across requests within this process.
-# Swapped out entirely in Phase 5.
+# Swapped out entirely in a future phase.
 _default_service = DatasetService()
 
 
 def get_dataset_service() -> DatasetService:
-    """FastAPI dependency - swap this to inject a DB-backed service in Phase 5."""
+    """FastAPI dependency - swap this to inject a DB-backed service later."""
     return _default_service
