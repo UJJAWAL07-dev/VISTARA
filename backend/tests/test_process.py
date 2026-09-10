@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 from fastapi.testclient import TestClient
 
 from app.integrations.ai_adapter import AIAdapter, AIAdapterError
+from app.integrations.analysis_adapter import AnalysisAdapter
+from app.integrations.gis_adapter import GISAdapter
 from app.main import app
 from app.models.job import Job
 from app.services.process_service import InMemoryJobStore, ProcessingService, get_processing_service
@@ -37,11 +39,38 @@ class FailingAIAdapter(AIAdapter):
         raise AIAdapterError("mock AI failure for testing")
 
 
+class MalformedAIAdapter(AIAdapter):
+    """
+    Phase 7: test double that returns successfully but with output that
+    does NOT match GeoJSONFeatureCollection (missing the required
+    "features" key) - simulating a real adapter that doesn't (yet)
+    conform to the documented contract, rather than one that raises.
+    """
+
+    def run_inference(self, job: Any) -> Dict[str, Any]:
+        return {"type": "FeatureCollection"}  # missing required "features"
+
+
+class MalformedGISAdapter(GISAdapter):
+    """Returns output missing GISResult's required "feature_count" field."""
+
+    def process(self, job: Any, ai_result: Dict[str, Any]) -> Dict[str, Any]:
+        return {"layer_id": "layer-x", "name": "Bad Layer", "crs": "EPSG:4326", "geojson": ai_result}
+
+
+class MalformedAnalysisAdapter(AnalysisAdapter):
+    """Returns output missing AnalysisResult's required "validation" field."""
+
+    def analyze(self, job: Any, gis_result: Dict[str, Any]) -> Dict[str, Any]:
+        return {"statistics": {"feature_count": 0}, "issues": []}
+
+
 def _override_service(store: Optional[InMemoryJobStore] = None) -> ProcessingService:
     """Give each test an isolated job store so tests don't leak state into each other."""
     service = ProcessingService(store=store or InMemoryJobStore())
     app.dependency_overrides[get_processing_service] = lambda: service
     return service
+
 
 
 def teardown_function() -> None:
@@ -267,3 +296,70 @@ def test_list_process_jobs_returns_all_created_jobs():
     for job in body:
         assert job["status"] == "completed"
         assert job["result"] is not None
+
+
+def test_malformed_ai_output_marks_job_failed_with_safe_error():
+    """Phase 7: an adapter that returns successfully but with output
+    that fails schema validation must be treated as a pipeline failure,
+    not marked "completed" and not an unhandled 500."""
+    service = ProcessingService(store=InMemoryJobStore(), ai_adapter=MalformedAIAdapter())
+    app.dependency_overrides[get_processing_service] = lambda: service
+
+    response = client.post(
+        "/api/v1/process",
+        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "failed"
+
+    status_response = client.get(f"/api/v1/process/{body['job_id']}")
+    assert status_response.status_code == 200
+    status_body = status_response.json()
+    assert status_body["status"] == "failed"
+    assert status_body["result"] is None
+    assert status_body["error"] == "AI adapter output did not match the expected schema."
+    # Safe error only - no leaked Pydantic internals, exception type, or traceback.
+    assert "ValidationError" not in status_body["error"]
+    assert "Traceback" not in status_body["error"]
+    assert ".py" not in status_body["error"]
+
+
+def test_malformed_gis_output_marks_job_failed_with_safe_error():
+    service = ProcessingService(store=InMemoryJobStore(), gis_adapter=MalformedGISAdapter())
+    app.dependency_overrides[get_processing_service] = lambda: service
+
+    response = client.post(
+        "/api/v1/process",
+        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "failed"
+
+    status_response = client.get(f"/api/v1/process/{body['job_id']}")
+    status_body = status_response.json()
+    assert status_body["result"] is None
+    assert status_body["error"] == "GIS adapter output did not match the expected schema."
+    assert "ValidationError" not in status_body["error"]
+    assert "Traceback" not in status_body["error"]
+
+
+def test_malformed_analysis_output_marks_job_failed_with_safe_error():
+    service = ProcessingService(store=InMemoryJobStore(), analysis_adapter=MalformedAnalysisAdapter())
+    app.dependency_overrides[get_processing_service] = lambda: service
+
+    response = client.post(
+        "/api/v1/process",
+        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "failed"
+
+    status_response = client.get(f"/api/v1/process/{body['job_id']}")
+    status_body = status_response.json()
+    assert status_body["result"] is None
+    assert status_body["error"] == "Analysis adapter output did not match the expected schema."
+    assert "ValidationError" not in status_body["error"]
+    assert "Traceback" not in status_body["error"]
