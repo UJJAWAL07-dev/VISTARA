@@ -4,9 +4,9 @@ Project business logic + storage.
 Two things live here, deliberately kept separate:
 
 1. InMemoryProjectStore - the ONLY place that touches the underlying
-   dict. In Phase 5, this whole class gets swapped for a
+   dict. In a future phase, this whole class gets swapped for a
    PostgresProjectStore backed by SQLAlchemy/PostGIS, implementing the
-   same method signatures (create/get/list/update/delete). Nothing
+   ProjectRepository contract (see app/core/interfaces.py). Nothing
    outside this class should ever reach into its internal dict.
 
 2. ProjectService - business logic. Routes call this, never the store
@@ -16,12 +16,19 @@ Two things live here, deliberately kept separate:
 This module intentionally does not know anything about HTTP status
 codes - it raises ProjectNotFoundError and lets the route layer
 translate that into a 404.
+
+Phase 5: ProjectService now type-hints its `store` parameter against
+the ProjectRepository Protocol instead of the concrete
+InMemoryProjectStore class. This is a typing-only change - runtime
+behavior is identical, since InMemoryProjectStore already satisfies
+the Protocol (see tests/test_interfaces.py).
 """
 
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
 
+from app.core.interfaces import ProjectRepository
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
@@ -74,7 +81,7 @@ class InMemoryProjectStore:
 
 
 class ProjectService:
-    def __init__(self, store: Optional[InMemoryProjectStore] = None) -> None:
+    def __init__(self, store: Optional[ProjectRepository] = None) -> None:
         self._store = store or InMemoryProjectStore()
 
     def create_project(self, data: ProjectCreate) -> Project:

@@ -8,6 +8,11 @@ stable callable service, so this adapter does NOT import or invent one
 
 This is DEMO/MOCK output. It does not represent the real GIS Analysis
 engine's behavior, accuracy, or validation logic in any way.
+
+Phase 5: this class's public shape is captured in
+app.core.interfaces.AnalysisAdapterProtocol - a real replacement
+should match that Protocol's `analyze(job, gis_result) -> dict`
+signature.
 """
 
 from typing import Any, Dict, List, Optional

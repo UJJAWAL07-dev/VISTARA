@@ -29,12 +29,25 @@ Datasets stores in this phase (unlike Dataset -> Project validation
 in Phase 3's dataset service). The processing request spec treats
 them as opaque required strings. This can be tightened later if
 cross-validation is wanted.
+
+Phase 5: ProcessingService now type-hints its `store` and adapter
+parameters against the JobRepository / AIAdapterProtocol /
+GISAdapterProtocol / AnalysisAdapterProtocol Protocols (see
+app/core/interfaces.py) instead of the concrete classes. Typing-only
+change - no behavior change; the concrete mock classes are still the
+runtime defaults.
 """
 
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
 
+from app.core.interfaces import (
+    AIAdapterProtocol,
+    AnalysisAdapterProtocol,
+    GISAdapterProtocol,
+    JobRepository,
+)
 from app.integrations.ai_adapter import AIAdapter, AIAdapterError
 from app.integrations.analysis_adapter import AnalysisAdapter, AnalysisAdapterError
 from app.integrations.gis_adapter import GISAdapter, GISAdapterError
@@ -77,10 +90,10 @@ class InMemoryJobStore:
 class ProcessingService:
     def __init__(
         self,
-        store: Optional[InMemoryJobStore] = None,
-        ai_adapter: Optional[AIAdapter] = None,
-        gis_adapter: Optional[GISAdapter] = None,
-        analysis_adapter: Optional[AnalysisAdapter] = None,
+        store: Optional[JobRepository] = None,
+        ai_adapter: Optional[AIAdapterProtocol] = None,
+        gis_adapter: Optional[GISAdapterProtocol] = None,
+        analysis_adapter: Optional[AnalysisAdapterProtocol] = None,
     ) -> None:
         self._store = store or InMemoryJobStore()
         # Adapters are injectable so tests (and later, real

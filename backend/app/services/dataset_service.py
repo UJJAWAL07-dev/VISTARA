@@ -4,8 +4,9 @@ Dataset business logic + storage.
 Mirrors the Projects pattern from Phase 2 exactly:
 
 1. InMemoryDatasetStore - the only place touching the underlying dict.
-   Replaced wholesale in Phase 5 by a PostgreSQL/PostGIS-backed store
-   with the same method signatures.
+   Replaced wholesale in a future phase by a PostgreSQL/PostGIS-backed
+   store implementing the DatasetRepository contract (see
+   app/core/interfaces.py).
 
 2. DatasetService - business logic. Routes call this, never the store
    directly.
@@ -17,12 +18,17 @@ existing project. Rather than importing InMemoryProjectStore directly
 existing ProjectService.get_project - so validation reuses Phase 2's
 ProjectNotFoundError without either service reaching into the other's
 storage.
+
+Phase 5: DatasetService now type-hints its `store` parameter against
+the DatasetRepository Protocol instead of the concrete
+InMemoryDatasetStore class. Typing-only change - no behavior change.
 """
 
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Callable, Dict, List, Optional
 
+from app.core.interfaces import DatasetRepository
 from app.models.dataset import Dataset
 from app.schemas.dataset import DatasetCreate, DatasetUpdate
 from app.services.project_service import get_project_service
@@ -73,7 +79,7 @@ class InMemoryDatasetStore:
 class DatasetService:
     def __init__(
         self,
-        store: Optional[InMemoryDatasetStore] = None,
+        store: Optional[DatasetRepository] = None,
         project_lookup: Optional[Callable[[str], object]] = None,
     ) -> None:
         self._store = store or InMemoryDatasetStore()
