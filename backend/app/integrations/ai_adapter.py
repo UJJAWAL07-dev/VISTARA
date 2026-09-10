@@ -14,11 +14,15 @@ Phase 4 implements only the "mock" mode: deterministic, clearly-fake
 GeoJSON output. It does NOT pretend to be the real model - values are
 fixed demo coordinates near Bengaluru, not real detections.
 
-Replacing this with the real AI pipeline later only means changing the
-body of `_run_real` (or wherever the real call goes) to invoke
-`ai.pipeline.VistaraAIPipeline().process_image(...)` and convert its
-output to this same dict shape. ProcessingService, the routes, and the
-Pydantic schemas do not need to change.
+Replacing this with the real AI pipeline later only means adding a
+"real" branch to `run_inference` (alongside the existing mock branch)
+that invokes `ai.pipeline.VistaraAIPipeline().process_image(...)` and
+converts its output to this same dict shape. ProcessingService, the
+routes, and the Pydantic schemas do not need to change.
+
+Phase 5: this class's public shape is captured in
+app.core.interfaces.AIAdapterProtocol - a real replacement should
+match that Protocol's `run_inference(job) -> dict` signature.
 """
 
 from typing import Any, Dict, List, Optional

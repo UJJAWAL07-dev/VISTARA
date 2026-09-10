@@ -15,6 +15,10 @@ result shape, without altering the geometry/features in any
 meaningful way. This is intentionally trivial - it exists so
 ProcessingService and downstream schemas have a stable shape to work
 with regardless of what the real GIS stage eventually does internally.
+
+Phase 5: this class's public shape is captured in
+app.core.interfaces.GISAdapterProtocol - a real replacement should
+match that Protocol's `process(job, ai_result) -> dict` signature.
 """
 
 from typing import Any, Dict, Optional

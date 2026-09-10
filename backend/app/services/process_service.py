@@ -29,17 +29,36 @@ Datasets stores in this phase (unlike Dataset -> Project validation
 in Phase 3's dataset service). The processing request spec treats
 them as opaque required strings. This can be tightened later if
 cross-validation is wanted.
+
+Phase 5: ProcessingService now type-hints its `store` and adapter
+parameters against the JobRepository / AIAdapterProtocol /
+GISAdapterProtocol / AnalysisAdapterProtocol Protocols (see
+app/core/interfaces.py) instead of the concrete classes. Typing-only
+change - no behavior change; the concrete mock classes are still the
+runtime defaults.
+
+Phase 6: added `list_jobs()` (backing the new GET /api/v1/process list
+endpoint) and lifecycle logging (job created/completed/failed).
 """
 
+import logging
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
 
+from app.core.interfaces import (
+    AIAdapterProtocol,
+    AnalysisAdapterProtocol,
+    GISAdapterProtocol,
+    JobRepository,
+)
 from app.integrations.ai_adapter import AIAdapter, AIAdapterError
 from app.integrations.analysis_adapter import AnalysisAdapter, AnalysisAdapterError
 from app.integrations.gis_adapter import GISAdapter, GISAdapterError
 from app.models.job import Job
 from app.schemas.process import ProcessRequest
+
+logger = logging.getLogger(__name__)
 
 
 class JobNotFoundError(Exception):
@@ -77,10 +96,10 @@ class InMemoryJobStore:
 class ProcessingService:
     def __init__(
         self,
-        store: Optional[InMemoryJobStore] = None,
-        ai_adapter: Optional[AIAdapter] = None,
-        gis_adapter: Optional[GISAdapter] = None,
-        analysis_adapter: Optional[AnalysisAdapter] = None,
+        store: Optional[JobRepository] = None,
+        ai_adapter: Optional[AIAdapterProtocol] = None,
+        gis_adapter: Optional[GISAdapterProtocol] = None,
+        analysis_adapter: Optional[AnalysisAdapterProtocol] = None,
     ) -> None:
         self._store = store or InMemoryJobStore()
         # Adapters are injectable so tests (and later, real
@@ -97,8 +116,13 @@ class ProcessingService:
             status="queued",
         )
         self._store.add(job)
+        logger.info("Job %s created (project=%s, dataset=%s, features=%s)",
+                    job.id, job.project_id, job.dataset_id, job.features)
         self._dispatch_to_pipeline(job)
         return job
+
+    def list_jobs(self) -> List[Job]:
+        return self._store.list()
 
     def get_job(self, job_id: str) -> Job:
         job = self._store.get(job_id)
@@ -127,6 +151,7 @@ class ProcessingService:
         except (AIAdapterError, GISAdapterError, AnalysisAdapterError) as exc:
             job.error = str(exc)
             self._set_status(job, "failed")
+            logger.warning("Job %s failed: %s", job.id, job.error)
             return
         except Exception:
             # Defensive: an adapter should only ever raise its own XAdapterError,
@@ -134,10 +159,12 @@ class ProcessingService:
             # exposing internal details or crashing the request.
             job.error = "Processing failed due to an unexpected internal error."
             self._set_status(job, "failed")
+            logger.exception("Job %s failed with an unexpected error", job.id)
             return
 
         job.result = {"ai": ai_result, "gis": gis_result, "analysis": analysis_result}
         self._set_status(job, "completed")
+        logger.info("Job %s completed", job.id)
 
     def _set_status(self, job: Job, new_status: str) -> None:
         job.status = new_status

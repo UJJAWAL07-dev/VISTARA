@@ -238,3 +238,32 @@ def test_adapter_failure_marks_job_failed_with_safe_error():
     # Safe error only - no traceback content (no "Traceback", no file paths).
     assert "Traceback" not in status_body["error"]
     assert ".py" not in status_body["error"]
+
+
+def test_list_process_jobs_returns_empty_when_none_exist():
+    _override_service()
+    response = client.get("/api/v1/process")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_process_jobs_returns_all_created_jobs():
+    _override_service()
+    created_ids = set()
+    for features in (["parcels"], ["buildings"], ["roads"]):
+        response = client.post(
+            "/api/v1/process",
+            json={"project_id": "project-001", "dataset_id": "dataset-001", "features": features},
+        )
+        created_ids.add(response.json()["job_id"])
+
+    list_response = client.get("/api/v1/process")
+    assert list_response.status_code == 200
+    body = list_response.json()
+    assert len(body) == 3
+    returned_ids = {job["job_id"] for job in body}
+    assert returned_ids == created_ids
+    # Each entry in the list should have the same shape as GET /process/{job_id}.
+    for job in body:
+        assert job["status"] == "completed"
+        assert job["result"] is not None
