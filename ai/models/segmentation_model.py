@@ -1,42 +1,70 @@
+from pathlib import Path
 from typing import Dict
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 
 class PrototypeSegmentor:
     """
-    Lightweight, deterministic feature detector for prototype extraction
-    of building footprints and linear road corridors.
-    Works reliably without GPU or large external weights.
+    Native Ultralytics YOLOv8 segmentation engine for VISTARA.
+    Loads fine-tuned weights if available in ai/models/weights/best.pt,
+    or falls back to the base yolov8n-seg.pt model.
     """
 
-    def __init__(self, confidence_threshold: float = 0.5):
+    def __init__(self, confidence_threshold: float = 0.25, model_weights: str = "yolov8n-seg.pt"):
         self.confidence_threshold = confidence_threshold
+
+        # If a fine-tuned model exists in the weights folder, prioritize it
+        custom_weights = Path("ai/models/weights/best.pt")
+        if custom_weights.exists():
+            print(f"Loading custom fine-tuned VISTARA model: {custom_weights}")
+            self.model = YOLO(str(custom_weights))
+        else:
+            print(f"Loading base Ultralytics YOLO model: {model_weights}")
+            self.model = YOLO(model_weights)
 
     def predict(self, image: np.ndarray) -> Dict[str, np.ndarray]:
         """
-        Executes segmentation on RGB imagery.
-        Returns:
-            Dict mapping class_name -> binary mask [0, 255]
+        Runs YOLO segmentation and returns binary masks for target classes.
         """
-        # Convert to HSV and Grayscale for contrast-based feature separation
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        h, w = image.shape[:2]
+        building_mask = np.zeros((h, w), dtype=np.uint8)
+        road_mask = np.zeros((h, w), dtype=np.uint8)
 
-        # 1. Building Footprints: High-contrast roofs / edge-dense structures
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        thresh_building = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 3
+        # Run inference using the YOLO engine
+        results = self.model.predict(
+            source=image,
+            conf=self.confidence_threshold,
+            retina_masks=True,
+            verbose=False
         )
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        building_mask = cv2.morphologyEx(thresh_building, cv2.MORPH_CLOSE, kernel)
 
-        # 2. Roads: Low-saturation, uniform intensity asphalt corridors
-        lower_gray = np.array([0, 0, 50])
-        upper_gray = np.array([180, 50, 200])
-        road_mask = cv2.inRange(hsv, lower_gray, upper_gray)
-        road_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-        road_mask = cv2.morphologyEx(road_mask, cv2.MORPH_OPEN, road_kernel)
+        if len(results) == 0 or results[0].masks is None:
+            return {"building": building_mask, "road": road_mask}
+
+        res = results[0]
+        class_ids = res.boxes.cls.cpu().numpy().astype(int)
+        names = res.names  # Mapping from class_id to label string
+        masks = res.masks.data.cpu().numpy()
+
+        for idx, mask in enumerate(masks):
+            label = names[class_ids[idx]].lower()
+
+            # Resize mask if dimensions differ from original image
+            if mask.shape != (h, w):
+                mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_NEAREST)
+
+            mask_binary = (mask * 255).astype(np.uint8)
+
+            # Route to the appropriate feature class
+            if "building" in label or "house" in label or "roof" in label or "batiment" in label:
+                building_mask = cv2.bitwise_or(building_mask, mask_binary)
+            elif "road" in label or "street" in label or "path" in label:
+                road_mask = cv2.bitwise_or(road_mask, mask_binary)
+            else:
+                # Default bucket for single-class datasets
+                building_mask = cv2.bitwise_or(building_mask, mask_binary)
 
         return {
             "building": building_mask,

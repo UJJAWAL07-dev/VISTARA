@@ -1,0 +1,8 @@
+# Use repository-relative paths only
+path: ../../datasets/sample/buildings
+train: images/train
+val: images/val
+
+names:
+  0: building
+  1: road
