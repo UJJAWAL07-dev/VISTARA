@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, examples=["Coastal Erosion Survey"])
     description: Optional[str] = Field(default=None, max_length=2000)
-    status: str = Field(default="active", examples=["active"])
+    status: str = Field(default="draft", examples=["draft"])
 
 
 class ProjectUpdate(BaseModel):

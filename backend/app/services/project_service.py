@@ -157,9 +157,13 @@ class ProjectService:
 
 # Module-level singleton store/service, shared across requests within
 # this process. Swapped out entirely in a future phase.
-_default_service = ProjectService()
+from app.db.database import SessionLocal
+from app.db.repositories import PostgresProjectStore
 
 
 def get_project_service() -> ProjectService:
-    """FastAPI dependency - swap this to inject a DB-backed service later."""
-    return _default_service
+    db = SessionLocal()
+    try:
+        return ProjectService(store=PostgresProjectStore(db))
+    finally:
+        db.close()

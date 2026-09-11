@@ -1,43 +1,14 @@
-"""
-Dataset business logic + storage.
-
-Mirrors the Projects pattern from Phase 2 exactly:
-
-1. InMemoryDatasetStore - the only place touching the underlying dict.
-   Replaced wholesale in a future phase by a PostgreSQL/PostGIS-backed
-   store implementing the DatasetRepository contract (see
-   app/core/interfaces.py).
-
-2. DatasetService - business logic. Routes call this, never the store
-   directly.
-
-The one addition versus Projects: every dataset must reference an
-existing project. Rather than importing InMemoryProjectStore directly
-(which would couple the two stores together), DatasetService takes a
-`project_lookup` callable - supplied at construction time from the
-existing ProjectService.get_project - so validation reuses Phase 2's
-ProjectNotFoundError without either service reaching into the other's
-storage.
-
-Phase 5: DatasetService now type-hints its `store` parameter against
-the DatasetRepository Protocol instead of the concrete
-InMemoryDatasetStore class. Typing-only change - no behavior change.
-
-Phase 6: added `delete_by_project`, called by ProjectService's cascade
-delete (see project_service.py's `_dataset_cleanup`). This method only
-touches DatasetService's own store - ProjectService never reaches into
-it directly, it only ever calls this public method.
-"""
-
+@'
 import logging
 from datetime import datetime, timezone
-from threading import Lock
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Optional, List
 
-from app.core.interfaces import DatasetRepository
+from sqlalchemy.orm import Session
+
+from app.db.repositories import PostgresDatasetStore
 from app.models.dataset import Dataset
 from app.schemas.dataset import DatasetCreate, DatasetUpdate
-from app.services.project_service import get_project_service
+from app.services.project_service import get_project_service, ProjectNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -48,64 +19,40 @@ class DatasetNotFoundError(Exception):
         super().__init__(f"Dataset '{dataset_id}' not found")
 
 
-class InMemoryDatasetStore:
-    """Isolated storage for Dataset objects. Not persisted across restarts."""
-
-    def __init__(self) -> None:
-        self._datasets: Dict[str, Dataset] = {}
-        self._lock = Lock()
-
-    def add(self, dataset: Dataset) -> Dataset:
-        with self._lock:
-            self._datasets[dataset.id] = dataset
-        return dataset
-
-    def get(self, dataset_id: str) -> Optional[Dataset]:
-        return self._datasets.get(dataset_id)
-
-    def list(self, project_id: Optional[str] = None) -> List[Dataset]:
-        values = list(self._datasets.values())
-        if project_id is not None:
-            values = [d for d in values if d.project_id == project_id]
-        return values
-
-    def update(self, dataset_id: str, dataset: Dataset) -> Optional[Dataset]:
-        with self._lock:
-            if dataset_id not in self._datasets:
-                return None
-            self._datasets[dataset_id] = dataset
-        return dataset
-
-    def delete(self, dataset_id: str) -> bool:
-        with self._lock:
-            if dataset_id not in self._datasets:
-                return False
-            del self._datasets[dataset_id]
-        return True
-
-
 class DatasetService:
     def __init__(
         self,
-        store: Optional[DatasetRepository] = None,
+        store=None,
         project_lookup: Optional[Callable[[str], object]] = None,
     ) -> None:
-        self._store = store or InMemoryDatasetStore()
-        # Defaults to the shared Phase 2 ProjectService's get_project method,
-        # which already raises ProjectNotFoundError when the ID is missing.
-        self._project_lookup = project_lookup or get_project_service().get_project
+        self._store = store
+        self._project_lookup = (
+            project_lookup or get_project_service().get_project
+        )
 
     def create_dataset(self, data: DatasetCreate) -> Dataset:
-        self._project_lookup(data.project_id)  # raises ProjectNotFoundError if missing
+        if self._store is None:
+            raise RuntimeError("DatasetService database store is not configured")
+
+        self._project_lookup(data.project_id)
+
         dataset = Dataset(
             project_id=data.project_id,
             name=data.name,
             dataset_type=data.dataset_type,
             description=data.description,
             status=data.status,
+            file_path=getattr(data, "file_path", None),
         )
+
         created = self._store.add(dataset)
-        logger.info("Dataset %s created under project %s", created.id, created.project_id)
+
+        logger.info(
+            "Dataset %s created under project %s",
+            created.id,
+            created.project_id,
+        )
+
         return created
 
     def list_datasets(self, project_id: Optional[str] = None) -> List[Dataset]:
@@ -113,53 +60,52 @@ class DatasetService:
 
     def get_dataset(self, dataset_id: str) -> Dataset:
         dataset = self._store.get(dataset_id)
+
         if dataset is None:
             raise DatasetNotFoundError(dataset_id)
+
         return dataset
 
-    def update_dataset(self, dataset_id: str, data: DatasetUpdate) -> Dataset:
-        existing = self.get_dataset(dataset_id)  # raises DatasetNotFoundError if missing
+    def update_dataset(
+        self,
+        dataset_id: str,
+        data: DatasetUpdate,
+    ) -> Dataset:
+        existing = self.get_dataset(dataset_id)
 
         updates = data.model_dump(exclude_unset=True)
+
         for field_name, value in updates.items():
             setattr(existing, field_name, value)
 
         existing.updated_at = datetime.now(timezone.utc)
 
         updated = self._store.update(dataset_id, existing)
+
         if updated is None:
             raise DatasetNotFoundError(dataset_id)
+
         return updated
 
     def delete_dataset(self, dataset_id: str) -> None:
         deleted = self._store.delete(dataset_id)
+
         if not deleted:
             raise DatasetNotFoundError(dataset_id)
+
         logger.info("Dataset %s deleted", dataset_id)
 
     def delete_by_project(self, project_id: str) -> int:
-        """
-        Deletes every dataset belonging to the given project. Called by
-        ProjectService's cascade delete (Phase 6) via the public
-        `dataset_cleanup` callable - never by ProjectService touching
-        this class's store directly.
-
-        Returns the number of datasets deleted. Safe to call for a
-        project with zero datasets (returns 0, does nothing).
-        """
         datasets = self._store.list(project_id=project_id)
+
         for dataset in datasets:
             self._store.delete(dataset.id)
-        if datasets:
-            logger.info("Cascade-deleted %d dataset(s) for project %s", len(datasets), project_id)
+
         return len(datasets)
 
 
-# Module-level singleton, shared across requests within this process.
-# Swapped out entirely in a future phase.
-_default_service = DatasetService()
-
-
-def get_dataset_service() -> DatasetService:
-    """FastAPI dependency - swap this to inject a DB-backed service later."""
-    return _default_service
+def get_dataset_service(db: Session) -> DatasetService:
+    return DatasetService(
+        store=PostgresDatasetStore(db),
+    )
+'@ | Set-Content -Encoding UTF8 app\services\dataset_service.py

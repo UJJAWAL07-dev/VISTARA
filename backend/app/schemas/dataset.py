@@ -19,8 +19,7 @@ class DatasetCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, examples=["Shoreline 2024 Survey"])
     dataset_type: str = Field(..., min_length=1, max_length=50, examples=["geojson"])
     description: Optional[str] = Field(default=None, max_length=2000)
-    status: str = Field(default="registered")
-
+    status: str = Field(default="pending")
 
 class DatasetUpdate(BaseModel):
     """All fields optional - only provided fields are changed (partial update)."""
