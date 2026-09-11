@@ -904,8 +904,15 @@ export default function DashboardPage() {
             <Settings2 className="size-4" />
           </button>
 
-          <div className="grid size-9 place-items-center rounded-lg bg-slate-950 text-xs font-bold text-white shadow-sm">
-            DU
+          <div
+             className="size-9 overflow-hidden rounded-full border border-slate-300 bg-slate-100"
+             title="Profile"
+          >
+             <img
+               src="/public/images/Profile/profile.png"
+               alt="Profile"
+               className="h-full w-full object-cover"
+             />
           </div>
         </div>
       </header>
@@ -1107,19 +1114,7 @@ export default function DashboardPage() {
                   <Upload className="size-7" />
                 </div>
 
-                <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  VISTARA WORKSPACE
-                </p>
-
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                  Import drone imagery
-                </h1>
-
-                <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">
-                  Upload urban drone imagery to begin
-                  creating cadastral features with
-                  VISTARA.
-                </p>
+                
 
                 <button
                   type="button"
