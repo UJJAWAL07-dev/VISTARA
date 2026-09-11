@@ -53,12 +53,28 @@ surface later as an opaque, uncaught pydantic.ValidationError when the
 route tried to build the HTTP response. Now it's caught here, at the
 orchestration boundary, and turned into a normal "failed" job with a
 safe, stage-specific message - exactly like any other adapter failure.
+
+Phase 9: the note above (project_id/dataset_id treated as opaque
+strings) is now OUT OF DATE for existence - `submit_job` validates
+both exist before a Job is created, via injected `project_lookup`/
+`dataset_lookup` callables. This mirrors the exact pattern already
+used by DatasetService's `project_lookup` (Phase 3) and
+ProjectService's `dataset_cleanup` (Phase 6): a callable, defaulting
+(lazily, to avoid circular imports) to the real service's lookup
+method, injectable in tests to point at an isolated store. A missing
+project/dataset raises the SAME ProjectNotFoundError/
+DatasetNotFoundError those services already raise - this module does
+not define new exception types for this, it reuses theirs, and lets
+them propagate to the route exactly like JobNotFoundError already
+does. Validation happens BEFORE the Job is constructed or stored, so
+no Job is ever created for a request referencing a nonexistent
+project or dataset.
 """
 
 import logging
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from pydantic import ValidationError
 
@@ -75,6 +91,33 @@ from app.models.job import Job
 from app.schemas.process import AnalysisResult, GeoJSONFeatureCollection, GISResult, ProcessRequest
 
 logger = logging.getLogger(__name__)
+
+
+def _default_project_lookup(project_id: str):
+    """
+    Default project-existence check, used only when ProcessingService
+    isn't given an explicit `project_lookup` (tests inject their own to
+    keep stores isolated - see tests/test_process.py). Imports
+    app.services.project_service lazily, at call time rather than at
+    module load time, mirroring the exact same pattern already used in
+    project_service.py's own `_default_dataset_cleanup` - this avoids a
+    circular import between the process/project/dataset service modules.
+    Raises ProjectNotFoundError (from project_service.py) if missing.
+    """
+    from app.services.project_service import get_project_service
+
+    return get_project_service().get_project(project_id)
+
+
+def _default_dataset_lookup(dataset_id: str):
+    """
+    Default dataset-existence check - see _default_project_lookup above
+    for why this is a lazy import. Raises DatasetNotFoundError (from
+    dataset_service.py) if missing.
+    """
+    from app.services.dataset_service import get_dataset_service
+
+    return get_dataset_service().get_dataset(dataset_id)
 
 
 class JobNotFoundError(Exception):
@@ -116,6 +159,8 @@ class ProcessingService:
         ai_adapter: Optional[AIAdapterProtocol] = None,
         gis_adapter: Optional[GISAdapterProtocol] = None,
         analysis_adapter: Optional[AnalysisAdapterProtocol] = None,
+        project_lookup: Optional[Callable[[str], object]] = None,
+        dataset_lookup: Optional[Callable[[str], object]] = None,
     ) -> None:
         self._store = store or InMemoryJobStore()
         # Adapters are injectable so tests (and later, real
@@ -123,8 +168,19 @@ class ProcessingService:
         self._ai_adapter = ai_adapter or AIAdapter()
         self._gis_adapter = gis_adapter or GISAdapter()
         self._analysis_adapter = analysis_adapter or AnalysisAdapter()
+        # Phase 9: existence checks, injectable for the same reason.
+        self._project_lookup = project_lookup or _default_project_lookup
+        self._dataset_lookup = dataset_lookup or _default_dataset_lookup
 
     def submit_job(self, data: ProcessRequest) -> Job:
+        # Phase 9: validate both references exist BEFORE creating the Job.
+        # Raises ProjectNotFoundError / DatasetNotFoundError (reused as-is
+        # from project_service.py / dataset_service.py) if either is
+        # missing - the route translates these to 404, same as every
+        # other NotFoundError in the app. No Job is created in that case.
+        self._project_lookup(data.project_id)
+        self._dataset_lookup(data.dataset_id)
+
         job = Job(
             project_id=data.project_id,
             dataset_id=data.dataset_id,

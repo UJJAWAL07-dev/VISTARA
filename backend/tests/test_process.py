@@ -7,7 +7,9 @@ from app.integrations.analysis_adapter import AnalysisAdapter
 from app.integrations.gis_adapter import GISAdapter
 from app.main import app
 from app.models.job import Job
+from app.services.dataset_service import DatasetService, InMemoryDatasetStore, get_dataset_service
 from app.services.process_service import InMemoryJobStore, ProcessingService, get_processing_service
+from app.services.project_service import InMemoryProjectStore, ProjectService, get_project_service
 
 client = TestClient(app)
 
@@ -65,25 +67,77 @@ class MalformedAnalysisAdapter(AnalysisAdapter):
         return {"statistics": {"feature_count": 0}, "issues": []}
 
 
-def _override_service(store: Optional[InMemoryJobStore] = None) -> ProcessingService:
-    """Give each test an isolated job store so tests don't leak state into each other."""
-    service = ProcessingService(store=store or InMemoryJobStore())
-    app.dependency_overrides[get_processing_service] = lambda: service
-    return service
+def _override_all_services(
+    job_store: Optional[InMemoryJobStore] = None,
+    ai_adapter: Optional[AIAdapter] = None,
+    gis_adapter: Optional[GISAdapter] = None,
+    analysis_adapter: Optional[AnalysisAdapter] = None,
+):
+    """
+    Phase 9: wires isolated Project, Dataset, and Processing services
+    together so a test's process-job creation validates its project_id/
+    dataset_id against the SAME in-memory stores the test's own
+    /api/v1/projects and /api/v1/datasets calls use - not the real
+    production singletons. Mirrors the same pattern already used in
+    tests/test_projects.py for cascade-delete testing (an isolated
+    ProjectService/DatasetService pair, wired via the same public
+    lookup methods ProcessingService injects by default in production).
 
+    Returns (project_service, dataset_service, processing_service) so a
+    test can also assert directly on ProcessingService's own state (e.g.
+    that no job was created) without needing a second HTTP round trip.
+    """
+    project_service = ProjectService(store=InMemoryProjectStore())
+    dataset_service = DatasetService(
+        store=InMemoryDatasetStore(),
+        project_lookup=project_service.get_project,
+    )
+    processing_service = ProcessingService(
+        store=job_store or InMemoryJobStore(),
+        ai_adapter=ai_adapter,
+        gis_adapter=gis_adapter,
+        analysis_adapter=analysis_adapter,
+        project_lookup=project_service.get_project,
+        dataset_lookup=dataset_service.get_dataset,
+    )
+
+    app.dependency_overrides[get_project_service] = lambda: project_service
+    app.dependency_overrides[get_dataset_service] = lambda: dataset_service
+    app.dependency_overrides[get_processing_service] = lambda: processing_service
+
+    return project_service, dataset_service, processing_service
+
+
+def _create_project_and_dataset(dataset_type: str = "csv") -> tuple:
+    """
+    Creates a real project and a real dataset under it via the actual
+    API, returning (project_id, dataset_id). Used so process-job tests
+    submit against real, existing records rather than fabricated IDs -
+    required since Phase 9 validates both actually exist.
+    """
+    project_id = client.post("/api/v1/projects", json={"name": "Test Project"}).json()["id"]
+    dataset_id = client.post(
+        "/api/v1/datasets",
+        json={"project_id": project_id, "name": "Test Dataset", "dataset_type": dataset_type},
+    ).json()["id"]
+    return project_id, dataset_id
 
 
 def teardown_function() -> None:
+    app.dependency_overrides.pop(get_project_service, None)
+    app.dependency_overrides.pop(get_dataset_service, None)
     app.dependency_overrides.pop(get_processing_service, None)
 
 
 def test_create_process_job_success():
-    _override_service()
+    _override_all_services()
+    project_id, dataset_id = _create_project_and_dataset()
+
     response = client.post(
         "/api/v1/process",
         json={
-            "project_id": "project-001",
-            "dataset_id": "dataset-001",
+            "project_id": project_id,
+            "dataset_id": dataset_id,
             "features": ["parcels", "buildings"],
         },
     )
@@ -96,7 +150,10 @@ def test_create_process_job_success():
 
 
 def test_create_process_job_missing_project_id():
-    _override_service()
+    _override_all_services()
+    # Missing field entirely -> rejected by Pydantic before the service
+    # layer (and its existence checks) ever runs, so a fabricated
+    # dataset_id here is fine - it's never actually looked up.
     response = client.post(
         "/api/v1/process",
         json={"dataset_id": "dataset-001", "features": ["parcels"]},
@@ -105,7 +162,7 @@ def test_create_process_job_missing_project_id():
 
 
 def test_create_process_job_missing_dataset_id():
-    _override_service()
+    _override_all_services()
     response = client.post(
         "/api/v1/process",
         json={"project_id": "project-001", "features": ["parcels"]},
@@ -114,7 +171,9 @@ def test_create_process_job_missing_dataset_id():
 
 
 def test_create_process_job_empty_features():
-    _override_service()
+    _override_all_services()
+    # Rejected by Pydantic's min_length=1 on `features` before the
+    # service layer runs - fabricated IDs are fine, never looked up.
     response = client.post(
         "/api/v1/process",
         json={"project_id": "project-001", "dataset_id": "dataset-001", "features": []},
@@ -123,7 +182,7 @@ def test_create_process_job_empty_features():
 
 
 def test_create_process_job_unsupported_feature():
-    _override_service()
+    _override_all_services()
     response = client.post(
         "/api/v1/process",
         json={
@@ -136,7 +195,7 @@ def test_create_process_job_unsupported_feature():
 
 
 def test_create_process_job_invalid_feature_type():
-    _override_service()
+    _override_all_services()
     response = client.post(
         "/api/v1/process",
         json={"project_id": "project-001", "dataset_id": "dataset-001", "features": [123]},
@@ -144,15 +203,50 @@ def test_create_process_job_invalid_feature_type():
     assert response.status_code == 422
 
 
-def test_job_status_retrieval():
-    _override_service()
-    create_response = client.post(
+def test_create_process_job_requires_existing_project():
+    """Phase 9: a nonexistent project_id must 404, and must not create a Job."""
+    _, _, processing_service = _override_all_services()
+
+    response = client.post(
         "/api/v1/process",
         json={
-            "project_id": "project-001",
-            "dataset_id": "dataset-001",
-            "features": ["roads"],
+            "project_id": "does-not-exist",
+            "dataset_id": "also-does-not-exist",
+            "features": ["parcels"],
         },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project 'does-not-exist' not found"
+    # No Job should have been created as a side effect of the failed attempt.
+    assert processing_service.list_jobs() == []
+
+
+def test_create_process_job_requires_existing_dataset():
+    """Phase 9: a valid project but a nonexistent dataset_id must 404,
+    and must not create a Job."""
+    _, _, processing_service = _override_all_services()
+    project_id = client.post("/api/v1/projects", json={"name": "Real Project"}).json()["id"]
+
+    response = client.post(
+        "/api/v1/process",
+        json={
+            "project_id": project_id,
+            "dataset_id": "does-not-exist",
+            "features": ["parcels"],
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Dataset 'does-not-exist' not found"
+    assert processing_service.list_jobs() == []
+
+
+def test_job_status_retrieval():
+    _override_all_services()
+    project_id, dataset_id = _create_project_and_dataset()
+
+    create_response = client.post(
+        "/api/v1/process",
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["roads"]},
     )
     job_id = create_response.json()["job_id"]
 
@@ -166,23 +260,21 @@ def test_job_status_retrieval():
 
 
 def test_job_not_found():
-    _override_service()
+    _override_all_services()
     response = client.get("/api/v1/process/does-not-exist")
     assert response.status_code == 404
     assert "detail" in response.json()
 
 
 def test_job_ids_are_unique():
-    _override_service()
+    _override_all_services()
+    project_id, dataset_id = _create_project_and_dataset()
+
     ids = set()
     for _ in range(5):
         response = client.post(
             "/api/v1/process",
-            json={
-                "project_id": "project-001",
-                "dataset_id": "dataset-001",
-                "features": ["land_use"],
-            },
+            json={"project_id": project_id, "dataset_id": dataset_id, "features": ["land_use"]},
         )
         ids.add(response.json()["job_id"])
     assert len(ids) == 5
@@ -193,11 +285,12 @@ def test_pipeline_progresses_through_processing_before_completed():
     not just that it ends at 'completed' - using a store that records
     every status transition it observes."""
     store = RecordingJobStore()
-    _override_service(store=store)
+    _override_all_services(job_store=store)
+    project_id, dataset_id = _create_project_and_dataset()
 
     response = client.post(
         "/api/v1/process",
-        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["parcels"]},
     )
     assert response.status_code == 201
 
@@ -206,12 +299,14 @@ def test_pipeline_progresses_through_processing_before_completed():
 
 
 def test_completed_job_contains_ai_gis_and_analysis_result():
-    _override_service()
+    _override_all_services()
+    project_id, dataset_id = _create_project_and_dataset()
+
     create_response = client.post(
         "/api/v1/process",
         json={
-            "project_id": "project-001",
-            "dataset_id": "dataset-001",
+            "project_id": project_id,
+            "dataset_id": dataset_id,
             "features": ["parcels", "buildings", "roads", "land_use"],
         },
     )
@@ -247,12 +342,12 @@ def test_completed_job_contains_ai_gis_and_analysis_result():
 
 
 def test_adapter_failure_marks_job_failed_with_safe_error():
-    service = ProcessingService(store=InMemoryJobStore(), ai_adapter=FailingAIAdapter())
-    app.dependency_overrides[get_processing_service] = lambda: service
+    _override_all_services(ai_adapter=FailingAIAdapter())
+    project_id, dataset_id = _create_project_and_dataset()
 
     response = client.post(
         "/api/v1/process",
-        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["parcels"]},
     )
     assert response.status_code == 201
     body = response.json()
@@ -270,19 +365,21 @@ def test_adapter_failure_marks_job_failed_with_safe_error():
 
 
 def test_list_process_jobs_returns_empty_when_none_exist():
-    _override_service()
+    _override_all_services()
     response = client.get("/api/v1/process")
     assert response.status_code == 200
     assert response.json() == []
 
 
 def test_list_process_jobs_returns_all_created_jobs():
-    _override_service()
+    _override_all_services()
+    project_id, dataset_id = _create_project_and_dataset()
+
     created_ids = set()
     for features in (["parcels"], ["buildings"], ["roads"]):
         response = client.post(
             "/api/v1/process",
-            json={"project_id": "project-001", "dataset_id": "dataset-001", "features": features},
+            json={"project_id": project_id, "dataset_id": dataset_id, "features": features},
         )
         created_ids.add(response.json()["job_id"])
 
@@ -302,12 +399,12 @@ def test_malformed_ai_output_marks_job_failed_with_safe_error():
     """Phase 7: an adapter that returns successfully but with output
     that fails schema validation must be treated as a pipeline failure,
     not marked "completed" and not an unhandled 500."""
-    service = ProcessingService(store=InMemoryJobStore(), ai_adapter=MalformedAIAdapter())
-    app.dependency_overrides[get_processing_service] = lambda: service
+    _override_all_services(ai_adapter=MalformedAIAdapter())
+    project_id, dataset_id = _create_project_and_dataset()
 
     response = client.post(
         "/api/v1/process",
-        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["parcels"]},
     )
     assert response.status_code == 201
     body = response.json()
@@ -326,12 +423,12 @@ def test_malformed_ai_output_marks_job_failed_with_safe_error():
 
 
 def test_malformed_gis_output_marks_job_failed_with_safe_error():
-    service = ProcessingService(store=InMemoryJobStore(), gis_adapter=MalformedGISAdapter())
-    app.dependency_overrides[get_processing_service] = lambda: service
+    _override_all_services(gis_adapter=MalformedGISAdapter())
+    project_id, dataset_id = _create_project_and_dataset()
 
     response = client.post(
         "/api/v1/process",
-        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["parcels"]},
     )
     assert response.status_code == 201
     body = response.json()
@@ -346,12 +443,12 @@ def test_malformed_gis_output_marks_job_failed_with_safe_error():
 
 
 def test_malformed_analysis_output_marks_job_failed_with_safe_error():
-    service = ProcessingService(store=InMemoryJobStore(), analysis_adapter=MalformedAnalysisAdapter())
-    app.dependency_overrides[get_processing_service] = lambda: service
+    _override_all_services(analysis_adapter=MalformedAnalysisAdapter())
+    project_id, dataset_id = _create_project_and_dataset()
 
     response = client.post(
         "/api/v1/process",
-        json={"project_id": "project-001", "dataset_id": "dataset-001", "features": ["parcels"]},
+        json={"project_id": project_id, "dataset_id": dataset_id, "features": ["parcels"]},
     )
     assert response.status_code == 201
     body = response.json()
