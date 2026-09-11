@@ -3,6 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# macOS and local GIS development artifacts
+.DS_Store
+.venv-1/
+gis/_output/
+
 # C extensions
 *.so
 
