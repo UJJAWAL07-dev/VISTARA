@@ -909,7 +909,7 @@ export default function DashboardPage() {
              title="Profile"
           >
              <img
-               src="/public/images/Profile/profile.png"
+               src="/images/Profile/profile.png"
                alt="Profile"
                className="h-full w-full object-cover"
              />
