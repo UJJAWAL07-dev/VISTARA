@@ -1,120 +1,230 @@
+import { useState } from "react";
+
 export default function AuthPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    // Keep the existing prototype navigation.
+    window.location.href = "/dashboard";
+  };
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#07111f",
-        color: "#ffffff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        fontFamily: "Inter, Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          padding: "40px",
-          borderRadius: "20px",
-          background: "#101c2d",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        <a
-          href="/"
-          style={{
-            color: "#ffffff",
-            textDecoration: "none",
-            opacity: 0.6,
-            fontSize: "14px",
-          }}
-        >
-          ← Back to VISTARA
-        </a>
+    <main className="auth-page">
+      {/* Background */}
+      <div className="auth-bg" />
 
-        <h1 style={{ marginTop: "32px", marginBottom: "10px" }}>
-          Welcome back
-        </h1>
+      {/* VISTARA BRAND */}
+      <a href="/" className="auth-brand">
+        <span className="auth-brand-name">VISTARA</span>
 
-        <p style={{ opacity: 0.6, marginBottom: "32px" }}>
-          Sign in to continue to your workspace.
-        </p>
+        <span className="auth-brand-subtitle">
+          Urban Cadastral Intelligence
+        </span>
+      </a>
 
-        <label style={{ display: "block", marginBottom: "8px" }}>
-          Email
-        </label>
+      {/* MAIN AUTH COMPOSITION */}
+      <div className="auth-shell">
 
-        <input
-          type="email"
-          placeholder="you@example.com"
-          style={{
-            width: "100%",
-            padding: "14px",
-            marginBottom: "20px",
-            borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#07111f",
-            color: "#ffffff",
-            outline: "none",
-          }}
-        />
+        {/* =================================================
+            LEFT VISUAL
+           ================================================= */}
+        <section className="auth-image-panel">
 
-        <label style={{ display: "block", marginBottom: "8px" }}>
-          Password
-        </label>
+          {!imageFailed ? (
+            <img
+              src="/images/auth-visual.jpg"
+              alt="Urban aerial imagery for cadastral mapping"
+              className="auth-image"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <video
+              src="/videos/globe-zoom.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="auth-image"
+              aria-label="VISTARA geospatial visualization"
+            />
+          )}
 
-        <input
-          type="password"
-          placeholder="••••••••"
-          style={{
-            width: "100%",
-            padding: "14px",
-            marginBottom: "24px",
-            borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#07111f",
-            color: "#ffffff",
-            outline: "none",
-          }}
-        />
+          <div className="auth-image-overlay" />
 
-        <button
-          onClick={() => {
-            window.location.href = "/dashboard";
-          }}
-          style={{
-            width: "100%",
-            padding: "14px",
-            borderRadius: "10px",
-            border: "none",
-            background: "#ffffff",
-            color: "#07111f",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Sign In
-        </button>
+          <div className="auth-image-index">
+            VISTARA / 01
+          </div>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "24px",
-            opacity: 0.6,
-            fontSize: "14px",
-          }}
-        >
-          New to VISTARA?{" "}
-          <a
-            href="/onboarding"
-            style={{ color: "#ffffff" }}
-          >
-            Get started
+        <div className="auth-image-content">
+
+  <div className="auth-image-tag">
+    <span className="auth-live-dot" />
+    GEOSPATIAL INTELLIGENCE
+  </div>
+
+  <div className="auth-image-footer">
+    <span>AI</span>
+
+    <span className="auth-mini-line" />
+
+    <span>GIS</span>
+
+    <span className="auth-mini-line" />
+
+    <span>WEBGIS</span>
+  </div>
+
+</div>
+        </section>
+
+        {/* =================================================
+            SIGN IN PANEL
+           ================================================= */}
+        <section className="auth-panel">
+
+          <a href="/" className="auth-back">
+            <span>←</span>
+            Back to VISTARA
           </a>
-        </p>
+
+          <div className="auth-intro">
+
+            <p className="auth-kicker">
+              WORKSPACE ACCESS
+            </p>
+
+            <h1>
+              Welcome back
+            </h1>
+
+            <p className="auth-description">
+              Sign in to continue to your workspace.
+            </p>
+
+          </div>
+
+          <form
+            className="auth-form"
+            onSubmit={handleSubmit}
+          >
+
+            {/* EMAIL */}
+            <div className="auth-field">
+
+              <label htmlFor="email">
+                Email
+              </label>
+
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+
+            </div>
+
+            {/* PASSWORD */}
+            <div className="auth-field">
+
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <div className="auth-password">
+
+                <input
+                  id="password"
+                  name="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                />
+
+                <button
+                  type="button"
+                  className="auth-show-password"
+                  onClick={() =>
+                    setShowPassword(
+                      (current) => !current
+                    )
+                  }
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* SIGN IN */}
+            <button
+              type="submit"
+              className="auth-submit"
+            >
+              <span>
+                Sign In
+              </span>
+
+              <span className="auth-submit-arrow">
+                →
+              </span>
+            </button>
+
+          </form>
+
+          {/* DIVIDER */}
+          <div className="auth-divider">
+
+            <span />
+
+            <small>
+              VISTARA WORKSPACE
+            </small>
+
+            <span />
+
+          </div>
+
+          {/* SIGN UP */}
+          <p className="auth-signup">
+            New to VISTARA?
+            <a href="/onboarding">
+              {" "}Get started
+            </a>
+          </p>
+
+          <p className="auth-security">
+            Secure access to your geospatial workspace
+          </p>
+
+        </section>
+
       </div>
-    </div>
+
+      {/* FOOTER */}
+      <div className="auth-bottom">
+
+        <span>
+          VISTARA
+        </span>
+
+        <span>
+          Urban Cadastral Intelligence
+        </span>
+
+      </div>
+
+    </main>
   );
 }
