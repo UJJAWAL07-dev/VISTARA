@@ -1,4 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
 @import "tailwindcss";
+
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
 
 html,
 body,
@@ -6,30 +13,3474 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  background: #f8fafc;
+  background: #020811;
+  color: white;
+
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Poppins",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
 }
-@keyframes fadeIn {
+
+
+/* =========================================================
+   MAIN PAGE
+   ========================================================= */
+
+.vistara-page {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+
+/* =========================================================
+   FIXED VIDEO BACKGROUND
+   ========================================================= */
+
+.vistara-background {
+  position: fixed;
+  inset: 0;
+
+  z-index: -10;
+
+  overflow: hidden;
+  pointer-events: none;
+  background: #020811;
+}
+
+
+.vistara-background-video {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  /*
+    Keeps the video visually stable while scrolling.
+  */
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+
+  /*
+    Slightly slower cinematic movement.
+    This does not affect the scroll speed.
+  */
+  filter: saturate(0.92) contrast(1.03) brightness(0.88);
+
+  will-change: transform;
+}
+
+
+/* =========================================================
+   GLOBAL VIDEO DARKENING
+   ========================================================= */
+
+.vistara-background-overlay {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(1, 7, 16, 0.50) 0%,
+      rgba(1, 7, 16, 0.20) 22%,
+      rgba(1, 7, 16, 0.38) 55%,
+      rgba(1, 7, 16, 0.68) 100%
+    );
+}
+
+
+/* =========================================================
+   CINEMATIC VIGNETTE
+   ========================================================= */
+
+.vistara-background-vignette {
+  position: absolute;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 20%,
+      rgba(0, 0, 0, 0.22) 65%,
+      rgba(0, 0, 0, 0.58) 100%
+    );
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.vistara-hero {
+  position: relative;
+  isolation: isolate;
+}
+
+
+/* =========================================================
+   HERO CONTENT
+   ========================================================= */
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+}
+
+
+/* =========================================================
+   HERO HEADING
+   ========================================================= */
+
+.hero-heading {
+  margin: 0;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: clamp(3.4rem, 6vw, 5.9rem);
+
+  font-weight: 700;
+
+  line-height: 0.98;
+
+  letter-spacing: -0.055em;
+
+  text-wrap: balance;
+}
+
+
+.hero-line {
+  display: block;
+
+  opacity: 0;
+
+  transform: translate3d(0, 28px, 0);
+
+  filter: blur(6px);
+
+  animation:
+    heroLineReveal
+    1.15s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+}
+
+
+.hero-line-one {
+  animation-delay: 0.12s;
+}
+
+
+.hero-line-two {
+  animation-delay: 0.28s;
+}
+
+
+.hero-heading-muted {
+  color: rgba(255, 255, 255, 0.53);
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 255, 255, 0.46) 55%,
+      rgba(255, 255, 255, 0.36) 100%
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* =========================================================
+   HERO DESCRIPTION
+   ========================================================= */
+
+.hero-description {
+  opacity: 0;
+
+  transform: translate3d(0, 20px, 0);
+
+  animation:
+    heroDescriptionReveal
+    0.95s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.58s
+    forwards;
+}
+
+
+/* =========================================================
+   HERO BUTTONS
+   ========================================================= */
+
+.hero-actions {
+  opacity: 0;
+
+  transform: translate3d(0, 18px, 0);
+
+  animation:
+    heroActionsReveal
+    0.9s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.78s
+    forwards;
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+   ========================================================= */
+
+.hero-primary-button {
+  position: relative;
+  overflow: hidden;
+
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+}
+
+
+.hero-primary-button::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  transform: translateX(-110%);
+
+  background:
+    linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 80%
+    );
+
+  transition: transform 650ms ease;
+}
+
+
+.hero-primary-button:hover::before {
+  transform: translateX(110%);
+}
+
+
+.hero-primary-button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+
+.hero-primary-button:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================================
+   SECONDARY BUTTON
+   ========================================================= */
+
+.hero-secondary-button {
+  transition:
+    transform 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease;
+}
+
+
+.hero-secondary-button:hover {
+  transform: translateY(-2px);
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border-color: rgba(255, 255, 255, 0.30);
+}
+
+
+/* =========================================================
+   SCROLLING CONTENT SECTIONS
+   ========================================================= */
+
+.vistara-content-section {
+  position: relative;
+
+  /*
+    Transparent enough for the globe to remain visible.
+  */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 8, 17, 0.62),
+      rgba(2, 8, 17, 0.72)
+    );
+
+  /*
+    Gives the text a professional glass/cinematic feel.
+  */
+  backdrop-filter: blur(2px);
+
+  -webkit-backdrop-filter: blur(2px);
+}
+
+
+/* =========================================================
+   SECTION EYEBROW
+   ========================================================= */
+
+.section-eyebrow {
+  font-family: "Poppins", sans-serif;
+
+  font-size: 10px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.22em;
+
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.40);
+}
+
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.section-heading {
+  font-family: "Poppins", sans-serif;
+
+  font-size: clamp(2rem, 4vw, 3.5rem);
+
+  font-weight: 600;
+
+  line-height: 1.05;
+
+  letter-spacing: -0.045em;
+
+  color: white;
+}
+
+
+/* =========================================================
+   SECTION TEXT
+   ========================================================= */
+
+.section-text {
+  font-family: "Poppins", sans-serif;
+
+  font-size: 14px;
+
+  font-weight: 400;
+
+  line-height: 1.9;
+
+  letter-spacing: -0.01em;
+
+  color: rgba(255, 255, 255, 0.55);
+}
+
+
+/* =========================================================
+   PROBLEM PANEL
+   ========================================================= */
+
+.section-panel {
+  padding: 30px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  border-radius: 16px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.16);
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px);
+}
+
+
+/* =========================================================
+   WORKFLOW GLASS CARDS
+   ========================================================= */
+
+.vistara-glass-card {
+  position: relative;
+
+  min-height: 180px;
+
+  padding: 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    0 16px 45px rgba(0, 0, 0, 0.16);
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px);
+
+  transition:
+    transform 300ms ease,
+    border-color 300ms ease,
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+
+.vistara-glass-card:hover {
+  transform: translateY(-5px);
+
+  border-color:
+    rgba(255, 255, 255, 0.18);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.10),
+      rgba(255, 255, 255, 0.035)
+    );
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+
+/* =========================================================
+   CAPABILITY CARDS
+   ========================================================= */
+
+.vistara-capability-card {
+  min-height: 260px;
+
+  padding: 24px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.065),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.18);
+
+  backdrop-filter: blur(12px);
+
+  -webkit-backdrop-filter: blur(12px);
+
+  transition:
+    transform 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+
+.vistara-capability-card:hover {
+  transform: translateY(-5px);
+
+  border-color:
+    rgba(255, 255, 255, 0.18);
+
+  box-shadow:
+    0 25px 65px rgba(0, 0, 0, 0.26);
+}
+
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes heroLineReveal {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate3d(0, 28px, 0);
+
+    filter: blur(6px);
+  }
+
+  60% {
+    opacity: 1;
+
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      translate3d(0, 0, 0);
+
+    filter: blur(0);
+  }
+}
+
+
+@keyframes heroDescriptionReveal {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate3d(0, 20px, 0);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      translate3d(0, 0, 0);
+  }
+}
+
+
+@keyframes heroActionsReveal {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate3d(0, 18px, 0);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      translate3d(0, 0, 0);
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  .hero-heading {
+    font-size:
+      clamp(2.8rem, 12vw, 4.5rem);
+
+    line-height: 1;
+
+    letter-spacing: -0.045em;
+  }
+
+  .vistara-background-video {
+    object-position: center center;
+  }
+
+  .vistara-content-section {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(2, 8, 17, 0.70),
+        rgba(2, 8, 17, 0.80)
+      );
+  }
+}
+
+
+@media (max-width: 480px) {
+
+  .hero-heading {
+    font-size: 2.65rem;
+
+    line-height: 1.02;
+  }
+
+  .section-heading {
+    font-size: 2rem;
+  }
+
+  .section-panel {
+    padding: 22px;
+  }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero-line,
+  .hero-description,
+  .hero-actions {
+    opacity: 1;
+
+    transform: none;
+
+    filter: none;
+
+    animation: none;
+  }
+
+  .vistara-glass-card,
+  .vistara-capability-card,
+  .hero-primary-button,
+  .hero-secondary-button {
+    transition: none;
+  }
+
+}
+/* =========================================================
+   VISTARA INTRODUCTION SECTION
+   ========================================================= */
+
+.vistara-intro-section {
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+
+  /*
+    Dark translucent surface.
+    The fixed globe remains visible behind it.
+  */
+  background:
+    linear-gradient(
+      90deg,
+      rgba(2, 8, 17, 0.76) 0%,
+      rgba(2, 8, 17, 0.62) 55%,
+      rgba(2, 8, 17, 0.48) 100%
+    );
+
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+
+/* =========================================================
+   INTRO HEADING
+   ========================================================= */
+
+.intro-heading {
+  max-width: 620px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: clamp(2.8rem, 5vw, 4.8rem);
+
+  font-weight: 600;
+
+  line-height: 1.02;
+
+  letter-spacing: -0.055em;
+
+  color: white;
+}
+
+.intro-heading span {
+  display: block;
+
+  color: rgba(255, 255, 255, 0.46);
+}
+
+
+/* =========================================================
+   INTRO DESCRIPTION
+   ========================================================= */
+
+.intro-description {
+  max-width: 570px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 14px;
+
+  font-weight: 400;
+
+  line-height: 1.85;
+
+  letter-spacing: -0.005em;
+
+  color: rgba(255, 255, 255, 0.52);
+}
+
+
+/* =========================================================
+   INTRO LINK
+   ========================================================= */
+
+.intro-link {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  color: rgba(255, 255, 255, 0.82);
+
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+.intro-link:hover {
+  color: white;
+}
+
+
+/* =========================================================
+   SAMPLE VIDEO CONTAINER
+   ========================================================= */
+
+.vistara-sample-video-wrapper {
+  width: 100%;
+}
+
+
+/*
+  This is intentionally a contained rectangular block,
+  similar to the visual treatment in your reference.
+*/
+
+.vistara-sample-video {
+  position: relative;
+
+  aspect-ratio: 16 / 10;
+
+  width: 100%;
+
+  overflow: hidden;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.13);
+
+  border-radius: 2px;
+
+  background: #020811;
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+
+/* =========================================================
+   SAMPLE VIDEO ITSELF
+   ========================================================= */
+
+.vistara-sample-video video {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+
+  filter:
+    saturate(0.92)
+    contrast(1.04)
+    brightness(0.90);
+
+  transform:
+    scale(1.002);
+
+  transition:
+    filter 500ms ease,
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/*
+  Very subtle zoom when the user hovers the block.
+  No aggressive animation.
+*/
+
+.vistara-sample-video:hover video {
+  transform: scale(1.025);
+
+  filter:
+    saturate(1)
+    contrast(1.04)
+    brightness(0.96);
+}
+
+
+/* =========================================================
+   VIDEO SHADE
+   ========================================================= */
+
+.vistara-sample-video-shade {
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.15) 0%,
+      transparent 45%,
+      rgba(0, 0, 0, 0.42) 100%
+    );
+}
+
+
+/* =========================================================
+   VIDEO LABEL
+   ========================================================= */
+
+.vistara-video-label {
+  position: absolute;
+
+  left: 18px;
+
+  top: 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding:
+    7px
+    10px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.14);
+
+  background:
+    rgba(2, 8, 17, 0.52);
+
+  backdrop-filter: blur(8px);
+
+  -webkit-backdrop-filter: blur(8px);
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.17em;
+
+  color: rgba(255, 255, 255, 0.70);
+}
+
+
+/* =========================================================
+   VIDEO STATUS DOT
+   ========================================================= */
+
+.vistara-video-dot {
+  width: 6px;
+
+  height: 6px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.75);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+
+/* =========================================================
+   VIDEO STATUS
+   ========================================================= */
+
+.vistara-video-status {
+  position: absolute;
+
+  right: 18px;
+
+  bottom: 18px;
+
+  padding:
+    6px
+    9px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.12);
+
+  background:
+    rgba(2, 8, 17, 0.45);
+
+  backdrop-filter: blur(8px);
+
+  -webkit-backdrop-filter: blur(8px);
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 7px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+
+  color: rgba(255, 255, 255, 0.55);
+}
+
+
+/* =========================================================
+   VIDEO CAPTION
+   ========================================================= */
+
+.vistara-video-caption {
+  margin-top: 12px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 10px;
+
+  font-weight: 500;
+
+  letter-spacing: 0.01em;
+
+  color: rgba(255, 255, 255, 0.35);
+}
+
+
+/* =========================================================
+   INTRO RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1024px) {
+
+  .intro-heading {
+    font-size: clamp(2.6rem, 6vw, 4rem);
+  }
+
+}
+
+
+@media (max-width: 768px) {
+
+  .vistara-intro-section {
+    background:
+      rgba(2, 8, 17, 0.74);
+  }
+
+  .intro-heading {
+    font-size: clamp(2.5rem, 11vw, 3.7rem);
+
+    line-height: 1.02;
+  }
+
+  .vistara-sample-video {
+    aspect-ratio: 16 / 10;
+  }
+
+}
+
+
+@media (max-width: 480px) {
+
+  .intro-heading {
+    font-size: 2.5rem;
+  }
+
+  .intro-description {
+    font-size: 13px;
+  }
+
+  .vistara-video-label {
+    left: 12px;
+    top: 12px;
+  }
+
+  .vistara-video-status {
+    right: 12px;
+    bottom: 12px;
+  }
+
+}
+/* =========================================================
+   VISTARA WORKFLOW
+   Inspired by the clean four-column GIS reference layout
+   ========================================================= */
+
+.vistara-workflow-section {
+  position: relative;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.09);
+
+  /*
+    Keep the fixed globe visible while giving the
+    content enough contrast.
+  */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 8, 17, 0.68) 0%,
+      rgba(2, 8, 17, 0.60) 100%
+    );
+
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+
+
+/* =========================================================
+   WORKFLOW HEADING
+   ========================================================= */
+
+.workflow-heading {
+  font-family: "Poppins", sans-serif;
+
+  font-size:
+    clamp(2.4rem, 4vw, 4rem);
+
+  font-weight: 600;
+
+  line-height: 1.06;
+
+  letter-spacing: -0.05em;
+
+  color: white;
+}
+
+
+/* =========================================================
+   WORKFLOW INTRO
+   ========================================================= */
+
+.workflow-intro {
+  max-width: 650px;
+
+  margin-left: auto;
+  margin-right: auto;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 13px;
+
+  font-weight: 400;
+
+  line-height: 1.8;
+
+  color:
+    rgba(255, 255, 255, 0.48);
+}
+
+
+/* =========================================================
+   FOUR FEATURE COLUMNS
+   ========================================================= */
+
+.workflow-features {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 0;
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.10);
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.10);
+}
+
+
+/* =========================================================
+   INDIVIDUAL FEATURE
+   ========================================================= */
+
+.workflow-feature {
+  position: relative;
+
+  min-height: 245px;
+
+  padding:
+    32px 30px 34px;
+
+  text-align: left;
+
+  border-right:
+    1px solid rgba(255, 255, 255, 0.09);
+
+  transition:
+    background-color 300ms ease,
+    transform 300ms ease;
+}
+
+
+/*
+  Remove border from last item.
+*/
+
+.workflow-feature:last-child {
+  border-right: none;
+}
+
+
+/*
+  Very subtle hover surface.
+  No floating cards or excessive effects.
+*/
+
+.workflow-feature:hover {
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+
+/* =========================================================
+   ICON
+   ========================================================= */
+
+.workflow-feature-icon {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 52px;
+
+  height: 52px;
+
+  margin-bottom: 20px;
+
+  color:
+    rgba(255, 255, 255, 0.72);
+
+  transition:
+    transform 300ms ease,
+    color 300ms ease;
+}
+
+
+.workflow-feature:hover
+.workflow-feature-icon {
+  transform: translateY(-3px);
+
+  color: white;
+}
+
+
+/* =========================================================
+   NUMBER
+   ========================================================= */
+
+.workflow-feature-number {
+  display: block;
+
+  margin-bottom: 9px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.18em;
+
+  color:
+    rgba(255, 255, 255, 0.27);
+}
+
+
+/* =========================================================
+   TITLE
+   ========================================================= */
+
+.workflow-feature-title {
+  margin: 0;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  line-height: 1.3;
+
+  letter-spacing: -0.02em;
+
+  color: white;
+}
+
+
+/* =========================================================
+   DESCRIPTION
+   ========================================================= */
+
+.workflow-feature-text {
+  max-width: 230px;
+
+  margin-top: 10px;
+
+  font-family: "Poppins", sans-serif;
+
+  font-size: 11px;
+
+  font-weight: 400;
+
+  line-height: 1.75;
+
+  color:
+    rgba(255, 255, 255, 0.43);
+}
+
+
+/* =========================================================
+   NAVIGATION ARROWS
+   ========================================================= */
+
+.workflow-nav {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 5;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 42px;
+
+  height: 42px;
+
+  margin-top: -21px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 999px;
+
+  background:
+    rgba(3, 9, 17, 0.82);
+
+  color:
+    rgba(255, 255, 255, 0.75);
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px);
+
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+
+.workflow-nav span {
+  display: block;
+
+  margin-top: -2px;
+
+  font-family:
+    Arial,
+    sans-serif;
+
+  font-size: 27px;
+
+  font-weight: 300;
+
+  line-height: 1;
+}
+
+
+.workflow-nav:hover {
+  background:
+    rgba(255, 255, 255, 0.10);
+
+  border-color:
+    rgba(255, 255, 255, 0.18);
+
+  color: white;
+}
+
+
+.workflow-nav-left {
+  left: -21px;
+}
+
+
+.workflow-nav-right {
+  right: -21px;
+}
+
+
+.workflow-nav-left:hover {
+  transform: translateX(-2px);
+}
+
+
+.workflow-nav-right:hover {
+  transform: translateX(2px);
+}
+
+
+/* =========================================================
+   WORKFLOW RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .workflow-features {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow-feature:nth-child(2) {
+    border-right: none;
+  }
+
+  .workflow-feature:nth-child(-n + 2) {
+    border-bottom:
+      1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .workflow-nav {
+    display: none;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .vistara-workflow-section {
+    background:
+      rgba(2, 8, 17, 0.75);
+  }
+
+  .workflow-heading {
+    font-size: 2.5rem;
+  }
+
+  .workflow-features {
+    grid-template-columns:
+      1fr;
+  }
+
+  .workflow-feature {
+    min-height: auto;
+
+    padding:
+      28px 22px;
+
+    border-right: none;
+
+    border-bottom:
+      1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .workflow-feature:last-child {
+    border-bottom: none;
+  }
+
+  .workflow-feature-text {
+    max-width: 100%;
+  }
+
+}
+/* =========================================================
+   VISTARA CAPABILITIES
+   ========================================================= */
+
+.vistara-capabilities-section {
+  position: relative;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+
+  /*
+    The globe remains visible behind the section,
+    but the content receives enough contrast to remain readable.
+  */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 8, 17, 0.66) 0%,
+      rgba(2, 8, 17, 0.74) 100%
+    );
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.capabilities-header {
+  max-width: 760px;
+}
+
+
+.capabilities-heading {
+  max-width: 850px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size:
+    clamp(2.6rem, 5vw, 4.5rem);
+
+  font-weight: 600;
+
+  line-height: 1.02;
+
+  letter-spacing: -0.055em;
+
+  color: white;
+}
+
+
+.capabilities-intro {
+  max-width: 650px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 13px;
+
+  line-height: 1.8;
+
+  color:
+    rgba(255, 255, 255, 0.45);
+}
+
+
+/* =========================================================
+   MAIN SHOWCASE
+   ========================================================= */
+
+.capability-showcase {
+  margin-top: 58px;
+
+  width: 100%;
+}
+
+
+/* =========================================================
+   CAPABILITY SELECTOR
+   ========================================================= */
+
+.capability-selector {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.11);
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.11);
+}
+
+
+.capability-tab {
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  min-height: 68px;
+
+  padding:
+    0 20px;
+
+  border: none;
+
+  border-right:
+    1px solid rgba(255, 255, 255, 0.08);
+
+  background: transparent;
+
+  cursor: pointer;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+
+  transition:
+    color 220ms ease,
+    background-color 220ms ease;
+}
+
+
+.capability-tab:last-child {
+  border-right: none;
+}
+
+
+.capability-tab:hover {
+  color:
+    rgba(255, 255, 255, 0.78);
+
+  background:
+    rgba(255, 255, 255, 0.018);
+}
+
+
+/*
+  Active blue/white line is intentionally subtle,
+  matching the reference's selected-tab treatment.
+*/
+
+.capability-tab::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+
+  right: 0;
+
+  bottom: -1px;
+
+  height: 2px;
+
+  background: transparent;
+
+  transform:
+    scaleX(0.35);
+
+  transform-origin: center;
+
+  transition:
+    background-color 220ms ease,
+    transform 220ms ease;
+}
+
+
+.capability-tab-active {
+  color: white;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+
+.capability-tab-active::after {
+  background:
+    rgba(255, 255, 255, 0.82);
+
+  transform:
+    scaleX(1);
+}
+
+
+.capability-tab-icon {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  opacity: 0.7;
+
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+
+.capability-tab-active
+.capability-tab-icon {
+  opacity: 1;
+
+  transform:
+    translateY(-1px);
+}
+
+
+.capability-tab-label {
+  font-size: 11px;
+
+  font-weight: 500;
+
+  letter-spacing: 0.01em;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   CONTENT AREA
+   ========================================================= */
+
+.capability-content {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.05fr)
+    minmax(0, 0.95fr);
+
+  min-height: 470px;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.10);
+}
+
+
+/* =========================================================
+   LEFT VISUAL
+   ========================================================= */
+
+.capability-visual-column {
+  min-width: 0;
+
+  padding:
+    30px 30px 30px 0;
+}
+
+
+.capability-visual {
+  position: relative;
+
+  width: 100%;
+
+  height: 100%;
+
+  min-height: 410px;
+
+  overflow: hidden;
+
+  background:
+    #07101a;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.11);
+}
+
+
+/*
+  The image is contained entirely inside this block.
+  It therefore cannot visually merge with the fixed globe.
+*/
+
+.capability-image {
+  display: block;
+
+  width: 100%;
+
+  height: 100%;
+
+  min-height: 410px;
+
+  object-fit: cover;
+
+  opacity: 0;
+
+  animation:
+    capabilityImageReveal 550ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+
+  transform:
+    scale(1.025);
+
+  filter:
+    saturate(0.92)
+    contrast(1.03)
+    brightness(0.88);
+}
+
+
+@keyframes capabilityImageReveal {
+
   from {
     opacity: 0;
-    transform: translateY(18px);
+
+    transform:
+      scale(1.025);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+
+    transform:
+      scale(1);
+  }
+
+}
+
+
+/* =========================================================
+   IMAGE OVERLAY
+   ========================================================= */
+
+.capability-visual-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 8, 17, 0.02) 0%,
+      rgba(2, 8, 17, 0.06) 48%,
+      rgba(2, 8, 17, 0.65) 100%
+    );
+}
+
+
+/* =========================================================
+   IMAGE META
+   ========================================================= */
+
+.capability-visual-meta {
+  position: absolute;
+
+  left: 18px;
+
+  right: 18px;
+
+  bottom: 16px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.17em;
+
+  color:
+    rgba(255, 255, 255, 0.66);
+}
+
+
+/* =========================================================
+   RIGHT DETAILS
+   ========================================================= */
+
+.capability-details {
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  padding:
+    60px 20px 60px 64px;
+}
+
+
+.capability-detail-eyebrow {
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.17em;
+
+  color:
+    rgba(255, 255, 255, 0.35);
+}
+
+
+.capability-detail-title {
+  max-width: 560px;
+
+  margin-top: 18px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size:
+    clamp(1.8rem, 3vw, 2.8rem);
+
+  font-weight: 600;
+
+  line-height: 1.12;
+
+  letter-spacing: -0.04em;
+
+  color: white;
+
+  animation:
+    capabilityTextReveal 450ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+.capability-detail-description {
+  max-width: 510px;
+
+  margin-top: 24px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 13px;
+
+  font-weight: 400;
+
+  line-height: 1.85;
+
+  color:
+    rgba(255, 255, 255, 0.47);
+
+  animation:
+    capabilityTextReveal 550ms
+    60ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+@keyframes capabilityTextReveal {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+
+}
+
+
+/* =========================================================
+   DETAIL DIVIDER
+   ========================================================= */
+
+.capability-detail-rule {
+  width: 100%;
+
+  max-width: 510px;
+
+  height: 1px;
+
+  margin-top: 34px;
+
+  background:
+    rgba(255, 255, 255, 0.10);
+}
+
+
+/* =========================================================
+   DETAIL FOOTER
+   ========================================================= */
+
+.capability-detail-footer {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  max-width: 510px;
+
+  margin-top: 18px;
+}
+
+
+.capability-detail-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 500;
+
+  letter-spacing: 0.02em;
+
+  color:
+    rgba(255, 255, 255, 0.40);
+}
+
+
+.capability-status-dot {
+  width: 6px;
+
+  height: 6px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.65);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.07);
+}
+
+
+.capability-detail-index {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.12em;
+
+  color:
+    rgba(255, 255, 255, 0.28);
+}
+
+
+.capability-detail-index span {
+  color:
+    rgba(255, 255, 255, 0.14);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .capability-content {
+    grid-template-columns: 1fr;
+
+  }
+
+  .capability-visual-column {
+    padding:
+      24px 0 0;
+  }
+
+  .capability-visual {
+    min-height: 360px;
+  }
+
+  .capability-image {
+    min-height: 360px;
+  }
+
+  .capability-details {
+    padding:
+      42px 0 50px;
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .capability-selector {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .capability-tab {
+    min-height: 58px;
+
+    border-bottom:
+      1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .capability-tab:nth-child(2) {
+    border-right: none;
+  }
+
+  .capability-tab-label {
+    font-size: 10px;
+  }
+
+  .capabilities-heading {
+    font-size: 2.6rem;
+  }
+
+}
+
+
+@media (max-width: 480px) {
+
+  .capability-selector {
+    grid-template-columns:
+      1fr;
+  }
+
+  .capability-tab {
+    justify-content: flex-start;
+
+    padding:
+      0 16px;
+
+    border-right: none;
+  }
+
+  .capability-tab:last-child {
+    border-bottom: none;
+  }
+
+  .capability-visual {
+    min-height: 270px;
+  }
+
+  .capability-image {
+    min-height: 270px;
+  }
+
+  .capability-details {
+    padding:
+      34px 0 42px;
+  }
+
+  .capability-detail-title {
+    font-size: 2rem;
+  }
+
+}
+/* =========================================================
+   WHY VISTARA
+   Editorial / GIS product-story section
+   ========================================================= */
+
+.vistara-why-section {
+  position: relative;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.09);
+
+  /*
+    The fixed globe remains visible behind this section.
+    This layer simply gives the content enough contrast.
+  */
+  background:
+    linear-gradient(
+      90deg,
+      rgba(2, 8, 17, 0.70) 0%,
+      rgba(2, 8, 17, 0.58) 55%,
+      rgba(2, 8, 17, 0.66) 100%
+    );
+}
+
+
+/* =========================================================
+   MAIN TWO-COLUMN LAYOUT
+   ========================================================= */
+
+.why-vistara-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 0.92fr)
+    minmax(0, 1.08fr);
+
+  align-items: center;
+
+  gap: 72px;
+}
+
+
+/* =========================================================
+   LEFT CONTENT
+   ========================================================= */
+
+.why-vistara-content {
+  max-width: 590px;
+}
+
+
+.why-vistara-heading {
+  max-width: 600px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size:
+    clamp(2.7rem, 4.8vw, 4.5rem);
+
+  font-weight: 600;
+
+  line-height: 1.03;
+
+  letter-spacing: -0.055em;
+
+  color: white;
+}
+
+
+.why-vistara-heading span {
+  display: block;
+
+  color:
+    rgba(255, 255, 255, 0.48);
+}
+
+
+/* =========================================================
+   PARAGRAPHS
+   ========================================================= */
+
+.why-vistara-copy {
+  max-width: 540px;
+
+  margin-top: 30px;
+}
+
+
+.why-vistara-copy p {
+  margin: 0 0 18px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 13px;
+
+  font-weight: 400;
+
+  line-height: 1.82;
+
+  color:
+    rgba(255, 255, 255, 0.48);
+}
+
+
+.why-vistara-copy p:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =========================================================
+   LINK ROW
+   ========================================================= */
+
+.why-vistara-link-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 18px;
+
+  margin-top: 34px;
+}
+
+
+.why-vistara-link {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  color:
+    rgba(255, 255, 255, 0.78);
+
+  transition:
+    color 220ms ease;
+}
+
+
+.why-vistara-link:hover {
+  color: white;
+}
+
+
+.why-vistara-divider {
+  width: 38px;
+
+  height: 1px;
+
+  background:
+    rgba(255, 255, 255, 0.14);
+}
+
+
+.why-vistara-meta {
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+
+  color:
+    rgba(255, 255, 255, 0.25);
+}
+
+
+/* =========================================================
+   RIGHT VIDEO
+   ========================================================= */
+
+.why-vistara-visual-column {
+  min-width: 0;
+}
+
+
+.why-vistara-video {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio: 16 / 10;
+
+  overflow: hidden;
+
+  background:
+    #050b12;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.12);
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.30);
+}
+
+
+/*
+  This video is intentionally contained inside its own
+  block so it never merges visually with the fixed globe.
+*/
+
+.why-vistara-video video {
+  display: block;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  filter:
+    saturate(0.92)
+    contrast(1.04)
+    brightness(0.88);
+
+  transform:
+    scale(1.002);
+
+  transition:
+    transform 900ms
+    cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+}
+
+
+.why-vistara-video:hover video {
+  transform:
+    scale(1.025);
+
+  filter:
+    saturate(1)
+    contrast(1.04)
+    brightness(0.94);
+}
+
+
+/* =========================================================
+   VIDEO OVERLAY
+   ========================================================= */
+
+.why-vistara-video-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 8, 17, 0.30) 0%,
+      transparent 38%,
+      rgba(2, 8, 17, 0.58) 100%
+    );
+}
+
+
+/* =========================================================
+   VIDEO TOP LABEL
+   ========================================================= */
+
+.why-vistara-video-top {
+  position: absolute;
+
+  top: 17px;
+
+  left: 18px;
+
+  right: 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+}
+
+
+.why-vistara-video-label,
+.why-vistara-video-state {
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+}
+
+
+.why-vistara-video-label {
+  color:
+    rgba(255, 255, 255, 0.76);
+}
+
+
+.why-vistara-video-state {
+  color:
+    rgba(255, 255, 255, 0.40);
+}
+
+
+/* =========================================================
+   VIDEO BOTTOM LABEL
+   ========================================================= */
+
+.why-vistara-video-bottom {
+  position: absolute;
+
+  left: 18px;
+
+  right: 18px;
+
+  bottom: 17px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 7px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+}
+
+
+.why-vistara-video-line {
+  width: 28px;
+
+  height: 1px;
+
+  background:
+    rgba(255, 255, 255, 0.42);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .why-vistara-grid {
+    grid-template-columns: 1fr;
+
+    gap: 48px;
+  }
+
+  .why-vistara-content {
+    max-width: 680px;
+  }
+
+  .why-vistara-video {
+    aspect-ratio: 16 / 9;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .why-vistara-heading {
+    font-size: 2.6rem;
+  }
+
+  .why-vistara-copy p {
+    font-size: 12px;
+  }
+
+  .why-vistara-link-row {
+    flex-wrap: wrap;
+
+    gap: 12px;
+  }
+
+  .why-vistara-divider {
+    display: none;
+  }
+
+  .why-vistara-video-top {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+  }
+
+  .why-vistara-video-bottom {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+}
+/* ============================================================
+   VISTARA AUTH PAGE
+   Scoped only to authentication page
+   ============================================================ */
+
+.auth-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 92px 46px 72px;
+
+  background: #06111f;
+  color: #ffffff;
+
+  font-family:
+    "Poppins",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+/* ------------------------------------------------------------
+   BACKGROUND
+   ------------------------------------------------------------ */
+
+.auth-bg {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 18% 50%,
+      rgba(42, 76, 103, 0.16),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 88% 20%,
+      rgba(31, 55, 76, 0.12),
+      transparent 28%
+    );
+
+  opacity: 1;
+}
+
+.auth-bg::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px
+    );
+
+  background-size: 90px 90px;
+
+  mask-image: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.8),
+    transparent 80%
+  );
+}
+
+/* ------------------------------------------------------------
+   BRAND
+   ------------------------------------------------------------ */
+
+.auth-brand {
+  position: absolute;
+  top: 31px;
+  left: 46px;
+  z-index: 10;
+
+  display: flex;
+  flex-direction: column;
+
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.auth-brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+
+  letter-spacing: -0.02em;
+}
+
+.auth-brand-subtitle {
+  margin-top: 7px;
+
+  font-size: 7px;
+  font-weight: 500;
+  line-height: 1;
+
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.31);
+}
+
+/* ------------------------------------------------------------
+   MAIN COMPOSITION
+   ------------------------------------------------------------ */
+
+.auth-shell {
+  position: relative;
+  z-index: 2;
+
+  width: min(1160px, 100%);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 480px;
+
+  align-items: center;
+}
+
+/* ------------------------------------------------------------
+   LEFT IMAGE
+   ------------------------------------------------------------ */
+
+.auth-image-panel {
+  position: relative;
+
+  width: 100%;
+  height: 590px;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 25px;
+
+  background: #0a1725;
+
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.auth-image {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  filter:
+    brightness(0.62)
+    saturate(0.75)
+    contrast(1.08);
+
+  transform: scale(1.015);
+
+  transition:
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+}
+
+.auth-image-panel:hover .auth-image {
+  transform: scale(1.035);
+
+  filter:
+    brightness(0.68)
+    saturate(0.85)
+    contrast(1.08);
+}
+
+/* Image overlay */
+
+.auth-image-overlay {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(3, 10, 19, 0.12) 0%,
+      rgba(3, 10, 19, 0.08) 40%,
+      rgba(3, 10, 19, 0.86) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(3, 10, 19, 0.28),
+      transparent 70%
+    );
+}
+
+/* ------------------------------------------------------------
+   IMAGE CONTENT
+   ------------------------------------------------------------ */
+
+.auth-image-content {
+  position: absolute;
+
+  left: 42px;
+  right: 42px;
+  bottom: 40px;
+
+  z-index: 3;
+
+  max-width: 520px;
+}
+
+.auth-image-tag {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 20px;
+
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.63);
+}
+
+.auth-live-dot {
+  width: 6px;
+  height: 6px;
+
+  flex: 0 0 6px;
+
+  border-radius: 50%;
+
+  background: #8bcbaa;
+
+  box-shadow:
+    0 0 0 4px rgba(139, 203, 170, 0.09),
+    0 0 15px rgba(139, 203, 170, 0.2);
+}
+
+.auth-image-content h2 {
+  margin: 0;
+
+  font-size: clamp(2.7rem, 4.2vw, 4.2rem);
+  font-weight: 600;
+  line-height: 0.99;
+
+  letter-spacing: -0.06em;
+
+  color: #ffffff;
+}
+
+.auth-image-content h2 span {
+  color: rgba(255, 255, 255, 0.43);
+}
+
+.auth-image-content p {
+  max-width: 470px;
+
+  margin: 23px 0 0;
+
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.75;
+
+  color: rgba(255, 255, 255, 0.49);
+}
+
+.auth-image-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-top: 27px;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.2em;
+
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-mini-line {
+  display: block;
+
+  width: 18px;
+  height: 1px;
+
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.auth-image-index {
+  position: absolute;
+
+  top: 22px;
+  left: 24px;
+
+  z-index: 3;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.18em;
+
+  color: rgba(255, 255, 255, 0.36);
+}
+
+/* ------------------------------------------------------------
+   RIGHT AUTH PANEL
+   ------------------------------------------------------------ */
+
+.auth-panel {
+  position: relative;
+  z-index: 5;
+
+  width: 100%;
+
+  margin-left: -76px;
+
+  padding: 43px 46px 38px;
+
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 21px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(18, 33, 50, 0.99),
+      rgba(10, 22, 36, 0.99)
+    );
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.46),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.auth-panel::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 42px;
+  right: 42px;
+
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+}
+
+/* ------------------------------------------------------------
+   BACK BUTTON
+   ------------------------------------------------------------ */
+
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  color: rgba(255, 255, 255, 0.46);
+
+  font-size: 10px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.auth-back span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.auth-back:hover {
+  color: rgba(255, 255, 255, 0.88);
+
+  transform: translateX(-2px);
+}
+
+/* ------------------------------------------------------------
+   HEADING
+   ------------------------------------------------------------ */
+
+.auth-intro {
+  margin-top: 46px;
+}
+
+.auth-kicker {
+  margin: 0 0 12px;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.29);
+}
+
+.auth-intro h1 {
+  margin: 0;
+
+  font-size: 31px;
+  font-weight: 600;
+  line-height: 1.05;
+
+  letter-spacing: -0.045em;
+
+  color: #ffffff;
+}
+
+.auth-description {
+  margin: 11px 0 0;
+
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.7;
+
+  color: rgba(255, 255, 255, 0.43);
+}
+
+/* ------------------------------------------------------------
+   FORM
+   ------------------------------------------------------------ */
+
+.auth-form {
+  margin-top: 34px;
+}
+
+.auth-field {
+  margin-bottom: 21px;
+}
+
+.auth-field label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  color: rgba(255, 255, 255, 0.73);
+}
+
+.auth-field input {
+  width: 100%;
+  height: 51px;
+
+  box-sizing: border-box;
+
+  padding: 0 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+
+  outline: none;
+
+  background: rgba(3, 12, 23, 0.78);
+
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 11px;
+
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.auth-field input::placeholder {
+  color: rgba(255, 255, 255, 0.27);
+}
+
+.auth-field input:hover {
+  border-color: rgba(255, 255, 255, 0.17);
+}
+
+.auth-field input:focus {
+  border-color: rgba(255, 255, 255, 0.33);
+
+  background: rgba(2, 11, 21, 0.94);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.045);
+}
+
+/* ------------------------------------------------------------
+   PASSWORD
+   ------------------------------------------------------------ */
+
+.auth-password {
+  position: relative;
+}
+
+.auth-password input {
+  padding-right: 58px;
+}
+
+.auth-show-password {
+  position: absolute;
+
+  top: 50%;
+  right: 13px;
+
+  transform: translateY(-50%);
+
+  padding: 4px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: rgba(255, 255, 255, 0.35);
+
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 180ms ease;
+}
+
+.auth-show-password:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ------------------------------------------------------------
+   SIGN IN BUTTON
+   ------------------------------------------------------------ */
+
+.auth-submit {
+  width: 100%;
+  height: 51px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  margin-top: 5px;
+
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #07111e;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.auth-submit:hover {
+  background: #edf1f4;
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.auth-submit:active {
+  transform: translateY(0);
+}
+
+.auth-submit:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 3px;
+}
+
+.auth-submit-arrow {
+  font-size: 15px;
+  line-height: 1;
+
+  transition: transform 180ms ease;
+}
+
+.auth-submit:hover .auth-submit-arrow {
+  transform: translateX(3px);
+}
+
+/* ------------------------------------------------------------
+   DIVIDER
+   ------------------------------------------------------------ */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  margin-top: 28px;
+}
+
+.auth-divider span {
+  flex: 1;
+
+  height: 1px;
+
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.auth-divider small {
+  font-size: 6px;
+  font-weight: 600;
+
+  letter-spacing: 0.17em;
+
+  white-space: nowrap;
+
+  color: rgba(255, 255, 255, 0.21);
+}
+
+/* ------------------------------------------------------------
+   SIGN UP
+   ------------------------------------------------------------ */
+
+.auth-signup {
+  margin: 23px 0 0;
+
+  text-align: center;
+
+  font-size: 9px;
+
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.auth-signup a {
+  color: rgba(255, 255, 255, 0.82);
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  transition: color 180ms ease;
+}
+
+.auth-signup a:hover {
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------
+   SECURITY
+   ------------------------------------------------------------ */
+
+.auth-security {
+  margin: 21px 0 0;
+
+  text-align: center;
+
+  font-size: 7px;
+  letter-spacing: 0.03em;
+
+  color: rgba(255, 255, 255, 0.18);
+}
+
+/* ------------------------------------------------------------
+   BOTTOM
+   ------------------------------------------------------------ */
+
+.auth-bottom {
+  position: absolute;
+
+  left: 46px;
+  right: 46px;
+  bottom: 24px;
+
+  z-index: 3;
+
+  display: flex;
+  justify-content: space-between;
+
+  font-size: 6px;
+  font-weight: 500;
+
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.19);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1050px) {
+  .auth-page {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .auth-shell {
+    grid-template-columns: minmax(0, 1fr) 440px;
+  }
+
+  .auth-panel {
+    margin-left: -55px;
+
+    padding-left: 38px;
+    padding-right: 38px;
+  }
+
+  .auth-image-content {
+    left: 32px;
+    right: 32px;
   }
 }
 
-.animate-fade-in {
-  animation: fadeIn 1s ease-out forwards;
+@media (max-width: 850px) {
+  .auth-page {
+    min-height: 100vh;
+    overflow-y: auto;
+
+    align-items: flex-start;
+
+    padding: 94px 22px 75px;
+  }
+
+  .auth-shell {
+    width: min(540px, 100%);
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  .auth-image-panel {
+    height: 320px;
+
+    border-radius: 21px;
+  }
+
+  .auth-image-content {
+    left: 28px;
+    right: 28px;
+    bottom: 27px;
+  }
+
+  .auth-image-content h2 {
+    font-size: 2.5rem;
+  }
+
+  .auth-image-content p {
+    display: none;
+  }
+
+  .auth-image-footer {
+    margin-top: 19px;
+  }
+
+  .auth-panel {
+    width: calc(100% - 42px);
+
+    margin: -55px auto 0;
+
+    padding: 37px 32px 32px;
+
+    border-radius: 19px;
+  }
+
+  .auth-intro {
+    margin-top: 40px;
+  }
+
+  .auth-brand {
+    left: 25px;
+  }
+
+  .auth-bottom {
+    left: 25px;
+    right: 25px;
+  }
 }
 
-.animate-fade-in-delay {
-  opacity: 0;
-  animation: fadeIn 1s ease-out 0.45s forwards;
+@media (max-width: 520px) {
+  .auth-page {
+    padding: 82px 14px 68px;
+  }
+
+  .auth-brand {
+    top: 25px;
+    left: 18px;
+  }
+
+  .auth-brand-name {
+    font-size: 15px;
+  }
+
+  .auth-brand-subtitle {
+    font-size: 6px;
+  }
+
+  .auth-image-panel {
+    height: 255px;
+
+    border-radius: 18px;
+  }
+
+  .auth-image-content {
+    left: 21px;
+    right: 21px;
+    bottom: 21px;
+  }
+
+  .auth-image-content h2 {
+    font-size: 2rem;
+  }
+
+  .auth-image-tag {
+    margin-bottom: 13px;
+
+    font-size: 6px;
+  }
+
+  .auth-image-footer {
+    gap: 9px;
+
+    margin-top: 15px;
+
+    font-size: 6px;
+  }
+
+  .auth-mini-line {
+    width: 13px;
+  }
+
+  .auth-panel {
+    width: calc(100% - 20px);
+
+    margin-top: -42px;
+
+    padding: 30px 23px 27px;
+
+    border-radius: 17px;
+  }
+
+  .auth-intro {
+    margin-top: 35px;
+  }
+
+  .auth-intro h1 {
+    font-size: 27px;
+  }
+
+  .auth-description {
+    font-size: 10px;
+  }
+
+  .auth-bottom {
+    left: 18px;
+    right: 18px;
+  }
+
+  .auth-bottom span:last-child {
+    display: none;
+  }
 }
