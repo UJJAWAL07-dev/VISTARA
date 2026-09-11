@@ -25,6 +25,33 @@ def calculate_accuracy_metrics(
     ``validate_against_ground_truth``. Centroid offsets are calculated only
     when both source GeoDataFrames are supplied; their units are the CRS units.
     """
+    if not isinstance(validation_report, dict):
+        raise InvalidInputError("validation_report must be a dictionary")
+
+    required_report_keys = {
+        "true_positive_count",
+        "false_positive_count",
+        "false_negative_count",
+        "true_positives",
+        "iou_threshold",
+    }
+    missing_keys = sorted(required_report_keys.difference(validation_report))
+    if missing_keys:
+        raise InvalidInputError(
+            "validation_report is missing required keys: "
+            + ", ".join(missing_keys)
+        )
+
+    if predicted_gdf is not None and not isinstance(predicted_gdf, gpd.GeoDataFrame):
+        raise InvalidInputError("predicted_gdf must be a GeoDataFrame or None")
+    if ground_truth_gdf is not None and not isinstance(ground_truth_gdf, gpd.GeoDataFrame):
+        raise InvalidInputError("ground_truth_gdf must be a GeoDataFrame or None")
+
+    if (predicted_gdf is None) != (ground_truth_gdf is None):
+        raise InvalidInputError(
+            "predicted_gdf and ground_truth_gdf must be supplied together"
+        )
+
     true_positive_count = int(validation_report["true_positive_count"])
     false_positive_count = int(validation_report["false_positive_count"])
     false_negative_count = int(validation_report["false_negative_count"])
@@ -33,7 +60,13 @@ def calculate_accuracy_metrics(
     recall = _ratio(true_positive_count, true_positive_count + false_negative_count)
     f1 = _ratio(2 * precision * recall, precision + recall)
 
-    ious = [float(match["iou"]) for match in validation_report["true_positives"]]
+    try:
+        ious = [float(match["iou"]) for match in validation_report["true_positives"]]
+    except (TypeError, KeyError, ValueError) as exc:
+        raise InvalidInputError(
+            "validation_report['true_positives'] must be a list of matches with an 'iou' value"
+        ) from exc
+
     result: Dict[str, Any] = {
         "layer": validation_report.get("layer", "layer"),
         "iou_threshold": float(validation_report["iou_threshold"]),
@@ -51,10 +84,6 @@ def calculate_accuracy_metrics(
         "max_centroid_offset": None,
     }
 
-    if (predicted_gdf is None) != (ground_truth_gdf is None):
-        raise InvalidInputError(
-            "predicted_gdf and ground_truth_gdf must be supplied together"
-        )
     if predicted_gdf is None or ground_truth_gdf is None:
         return result
 
