@@ -9,6 +9,14 @@ logic lives in this file - see process_service.py's
 
 Phase 6: added GET /process (list all jobs), mirroring the existing
 list-endpoint convention already used by Projects and Datasets.
+
+Phase 9: create_process_job now also catches ProjectNotFoundError and
+DatasetNotFoundError, translating them to 404 exactly like every other
+NotFoundError in the app already is. This is required because
+ProcessingService.submit_job now validates the referenced project and
+dataset actually exist (see process_service.py) - without this catch,
+those errors would instead reach the global exception handler in
+main.py and produce an opaque 500, not the 404 the API contract needs.
 """
 
 from typing import List
@@ -16,11 +24,13 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.schemas.process import JobStatusResponse, ProcessRequest, ProcessResponse
+from app.services.dataset_service import DatasetNotFoundError
 from app.services.process_service import (
     JobNotFoundError,
     ProcessingService,
     get_processing_service,
 )
+from app.services.project_service import ProjectNotFoundError
 
 router = APIRouter(prefix="/process", tags=["processing"])
 
@@ -38,12 +48,16 @@ router = APIRouter(prefix="/process", tags=["processing"])
         "time (queued/processing/completed/failed) - use GET /process/{job_id} "
         "to re-check status and retrieve the full result later."
     ),
+    responses={404: {"description": "Referenced project or dataset not found"}},
 )
 async def create_process_job(
     payload: ProcessRequest,
     service: ProcessingService = Depends(get_processing_service),
 ) -> ProcessResponse:
-    job = service.submit_job(payload)
+    try:
+        job = service.submit_job(payload)
+    except (JobNotFoundError, ProjectNotFoundError, DatasetNotFoundError) as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return ProcessResponse(job_id=job.id, status=job.status)
 
 
